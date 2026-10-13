@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useShop } from '../context/ShopContext';
 import { CURRENCIES } from '../data/mockProducts';
 import { CurrencyCode } from '../types';
@@ -17,10 +17,13 @@ import {
   User,
   LogOut,
   Lock,
+  ArrowRight,
+  TrendingUp,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const {
+    products,
     cartCount,
     cartSubtotal,
     formatPrice,
@@ -31,6 +34,7 @@ export const Navbar: React.FC = () => {
     toggleDarkMode,
     setIsCartOpen,
     setIsWishlistOpen,
+    setSelectedProduct,
     activeTab,
     setActiveTab,
     filters,
@@ -42,6 +46,23 @@ export const Navbar: React.FC = () => {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close search popover on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(e.target as Node)
+      ) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSearchChange = (value: string) => {
     setFilters((prev) => ({ ...prev, search: value }));
@@ -50,8 +71,32 @@ export const Navbar: React.FC = () => {
     }
   };
 
+  const trendingTags = [
+    'Wireless Headphones',
+    'Titanium Watch',
+    'Mechanical Keyboard',
+    'Merino Wool',
+    'Running Shoes',
+    'Coffee',
+  ];
+
+  // Quick matching results preview (top 4)
+  const quickResults = filters.search.trim()
+    ? products
+        .filter((p) => {
+          const q = filters.search.toLowerCase().trim();
+          return (
+            p.title.toLowerCase().includes(q) ||
+            p.brand.toLowerCase().includes(q) ||
+            p.category.toLowerCase().includes(q) ||
+            (p.tags && p.tags.some((t) => t.toLowerCase().includes(q)))
+          );
+        })
+        .slice(0, 4)
+    : [];
+
   return (
-    <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-white/90 dark:bg-slate-900/90 border-b border-slate-200/80 dark:border-slate-800 transition-colors">
+    <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-white/95 dark:bg-slate-900/95 border-b border-slate-200/80 dark:border-slate-800 transition-colors">
       {/* Announcement Bar */}
       <div className="bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-700 text-white text-xs font-semibold py-2 px-4 text-center tracking-wide flex items-center justify-center gap-2">
         <Sparkles className="w-3.5 h-3.5 animate-pulse text-amber-300" />
@@ -62,7 +107,7 @@ export const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20 gap-3 sm:gap-4">
           {/* Logo */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-shrink-0">
             <button
               onClick={() => {
                 setActiveTab('shop');
@@ -84,16 +129,33 @@ export const Navbar: React.FC = () => {
             </button>
           </div>
 
-          {/* Search Bar - Desktop */}
-          <div className="hidden md:flex flex-1 max-w-md mx-4 relative">
-            <div className="relative w-full">
+          {/* Dynamic Expanding Search Bar - Desktop */}
+          <div
+            ref={searchContainerRef}
+            className={`hidden md:block relative transition-all duration-300 ease-in-out z-50 ${
+              isSearchFocused || filters.search
+                ? 'flex-1 max-w-xl lg:max-w-2xl mx-2'
+                : 'w-64 lg:w-80 mx-2'
+            }`}
+          >
+            <div
+              className={`relative rounded-2xl transition-all duration-300 ${
+                isSearchFocused
+                  ? 'ring-4 ring-brand-500/20 shadow-2xl bg-white dark:bg-slate-900'
+                  : 'bg-slate-100/90 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-800'
+              }`}
+            >
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 value={filters.search}
+                onFocus={() => {
+                  setIsSearchFocused(true);
+                  if (activeTab !== 'shop') setActiveTab('shop');
+                }}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Search products, brands, tags in DreamIT Mall..."
-                className="w-full pl-10 pr-9 py-2 rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-transparent focus:border-brand-500 focus:bg-white dark:focus:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
+                placeholder="Search products, brands, departments in DreamIT Mall..."
+                className="w-full pl-10 pr-9 py-2.5 rounded-2xl border border-transparent focus:border-brand-500 bg-transparent text-sm focus:outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400 font-medium"
               />
               {filters.search && (
                 <button
@@ -104,10 +166,93 @@ export const Navbar: React.FC = () => {
                 </button>
               )}
             </div>
+
+            {/* Live Autocomplete & Search Popover */}
+            {isSearchFocused && (
+              <div className="absolute top-full left-0 right-0 mt-2 p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 animate-scale-in text-xs">
+                {/* Trending Tags */}
+                <div>
+                  <div className="flex items-center gap-1.5 text-slate-400 font-bold uppercase tracking-wider text-[10px] mb-2">
+                    <TrendingUp className="w-3.5 h-3.5 text-brand-500" />
+                    <span>Popular Searches</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {trendingTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          handleSearchChange(tag);
+                          setIsSearchFocused(false);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-brand-50 dark:bg-slate-800 dark:hover:bg-brand-950/60 text-slate-700 dark:text-slate-300 hover:text-brand-600 transition-colors cursor-pointer font-medium"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Instant Matching Results */}
+                {quickResults.length > 0 && (
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] block mb-2">
+                      Matching Items ({quickResults.length})
+                    </span>
+                    <div className="space-y-2">
+                      {quickResults.map((item) => (
+                        <div
+                          key={item.id}
+                          onClick={() => {
+                            setSelectedProduct(item);
+                            setIsSearchFocused(false);
+                          }}
+                          className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <img
+                              src={item.images[0]}
+                              alt=""
+                              className="w-9 h-9 rounded-lg object-cover bg-slate-100"
+                            />
+                            <div>
+                              <p className="font-bold text-slate-900 dark:text-white line-clamp-1">
+                                {item.title}
+                              </p>
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                {item.category} • {item.brand}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="font-extrabold text-brand-600 dark:text-brand-400">
+                            {formatPrice(item.price)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {filters.search && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSearchFocused(false);
+                      const catalogEl = document.getElementById('product-catalog');
+                      if (catalogEl) catalogEl.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-center flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <span>View all matching results in catalog</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-1 flex-shrink-0">
             <button
               onClick={() => setActiveTab('shop')}
               className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
@@ -147,7 +292,7 @@ export const Navbar: React.FC = () => {
           </nav>
 
           {/* Actions & Utilities */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {/* Currency Selector */}
             <div className="relative">
               <label htmlFor="currency-select" className="sr-only">
@@ -209,7 +354,7 @@ export const Navbar: React.FC = () => {
               </span>
             </button>
 
-            {/* User Profile / Auth Button with Dropdown */}
+            {/* User Profile / Auth Button (Separate Sign In & Sign Up) */}
             <div className="relative">
               {currentUser ? (
                 <div className="relative">
@@ -269,7 +414,7 @@ export const Navbar: React.FC = () => {
                       ) : (
                         <button
                           onClick={() => {
-                            openAuthModal('admin');
+                            openAuthModal('admin', 'login');
                             setUserDropdownOpen(false);
                           }}
                           className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold flex items-center gap-2 text-slate-700 dark:text-slate-300 cursor-pointer"
@@ -293,13 +438,21 @@ export const Navbar: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <button
-                  onClick={() => openAuthModal('customer')}
-                  className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <User className="w-4 h-4" />
-                  <span>Sign In</span>
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => openAuthModal('customer', 'login')}
+                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span>Sign In</span>
+                  </button>
+                  <button
+                    onClick={() => openAuthModal('customer', 'register')}
+                    className="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Sign Up</span>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -380,6 +533,29 @@ export const Navbar: React.FC = () => {
               <ShieldCheck className="w-4 h-4" />
               Admin Portal
             </button>
+
+            {!currentUser && (
+              <div className="flex gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  onClick={() => {
+                    openAuthModal('customer', 'login');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex-1 py-2 rounded-xl bg-slate-100 text-slate-800 text-xs font-bold text-center"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => {
+                    openAuthModal('customer', 'register');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex-1 py-2 rounded-xl bg-brand-600 text-white text-xs font-bold text-center"
+                >
+                  Sign Up
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -395,6 +395,12 @@ export const OrdersView: React.FC = () => {
                           <span>Taxes</span>
                           <span>{formatPrice(order.tax)}</span>
                         </div>
+                        {order.razorpayPaymentId && (
+                          <div className="flex justify-between text-brand-600 dark:text-brand-400 font-semibold">
+                            <span>Razorpay ID</span>
+                            <span className="font-mono text-[11px]">{order.razorpayPaymentId}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between font-extrabold text-sm pt-1 border-t border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
                           <span>Total</span>
                           <span className="text-brand-600 dark:text-brand-400">
@@ -625,6 +631,11 @@ export const OrdersView: React.FC = () => {
                 <p className="text-slate-600">
                   Status: <strong>{selectedInvoice.status}</strong>
                 </p>
+                {selectedInvoice.razorpayPaymentId && (
+                  <p className="text-slate-600 font-mono text-[10px]">
+                    Razorpay ID: {selectedInvoice.razorpayPaymentId}
+                  </p>
+                )}
               </div>
             </div>
 

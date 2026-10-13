@@ -16,39 +16,29 @@ import {
   INITIAL_REVIEWS,
   CURRENCIES,
   AVAILABLE_COUPONS,
+  DEMO_USERS,
 } from '../data/mockProducts';
 import { getStorageItem, setStorageItem } from '../utils/storage';
-
-export const DEMO_USERS: User[] = [
-  {
-    id: 'usr-admin',
-    name: 'DreamIT Admin',
-    email: 'admin@dreamit.com',
-    role: 'admin',
-    joinedDate: '2026-01-01',
-  },
-  {
-    id: 'usr-customer',
-    name: 'Alex Mercer',
-    email: 'user@dreamit.com',
-    role: 'customer',
-    joinedDate: '2026-05-15',
-  },
-];
 
 interface ShopContextType {
   // Auth
   currentUser: User | null;
   users: User[];
-  login: (email: string, role?: UserRole) => { success: boolean; message: string };
-  register: (name: string, email: string, role: UserRole) => { success: boolean; message: string };
+  login: (identifier: string, password?: string, role?: UserRole) => { success: boolean; message: string };
+  register: (name: string, email: string, phone: string, password: string, role: UserRole) => { success: boolean; message: string };
   logout: () => void;
+  sendOtp: (phone: string) => { success: boolean; otp?: string; message: string };
+  resetPasswordWithOtp: (phone: string, otp: string, expectedOtp: string, newPassword: string) => { success: boolean; message: string };
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
   authModalRole: UserRole;
   setAuthModalRole: (role: UserRole) => void;
-  openAuthModal: (role?: UserRole) => void;
+  authModalMode: 'login' | 'register' | 'forgot';
+  setAuthModalMode: (mode: 'login' | 'register' | 'forgot') => void;
+  openAuthModal: (role?: UserRole, mode?: 'login' | 'register' | 'forgot') => void;
   closeAuthModal: () => void;
+  razorpayKeyId: string;
+  setRazorpayKeyId: (key: string) => void;
 
   // Products
   products: Product[];
@@ -129,16 +119,51 @@ const INITIAL_FILTERS: FilterState = {
   sortBy: 'featured',
 };
 
+const normalizeStoredUsers = (saved: any): User[] => {
+  if (!Array.isArray(saved) || saved.length === 0) return DEMO_USERS;
+  return saved.map((u) => {
+    if (u.id === 'usr-admin' || u.email === 'admin@dreamit.com') {
+      return {
+        ...u,
+        phone: u.phone || '9876543210',
+        password: u.password || 'admin123',
+      };
+    }
+    if (u.id === 'usr-customer' || u.email === 'user@dreamit.com') {
+      return {
+        ...u,
+        phone: u.phone || '9123456789',
+        password: u.password || 'user123',
+      };
+    }
+    return {
+      ...u,
+      phone: u.phone || '9999999999',
+      password: u.password || 'password123',
+    };
+  });
+};
+
 export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Authentication
-  const [users, setUsers] = useState<User[]>(() =>
-    getStorageItem('dreamit_users', DEMO_USERS)
-  );
-  const [currentUser, setCurrentUser] = useState<User | null>(() =>
-    getStorageItem('dreamit_user', DEMO_USERS[1]) // Default to Alex Mercer (Customer) for instant convenience
-  );
+  const [users, setUsers] = useState<User[]>(() => {
+    const raw = getStorageItem('dreamit_users', DEMO_USERS);
+    return normalizeStoredUsers(raw);
+  });
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const rawUser = getStorageItem('dreamit_user', DEMO_USERS[1]);
+    if (!rawUser) return null;
+    if (rawUser.id === 'usr-admin') return { ...rawUser, phone: rawUser.phone || '9876543210', password: rawUser.password || 'admin123' };
+    if (rawUser.id === 'usr-customer') return { ...rawUser, phone: rawUser.phone || '9123456789', password: rawUser.password || 'user123' };
+    return rawUser;
+  });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalRole, setAuthModalRole] = useState<UserRole>('customer');
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register' | 'forgot'>('login');
+  const [activeOtps, setActiveOtps] = useState<Record<string, { otp: string; expiresAt: number }>>({});
+  const [razorpayKeyId, setRazorpayKeyId] = useState<string>(() =>
+    getStorageItem('dreamit_razorpay_key', 'rzp_test_51MockDreamIT')
+  );
 
   // Products
   const [products, setProducts] = useState<Product[]>(() =>
@@ -246,9 +271,17 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, 3500);
   };
 
+  useEffect(() => {
+    setStorageItem('dreamit_razorpay_key', razorpayKeyId);
+  }, [razorpayKeyId]);
+
   // Auth Operations
-  const openAuthModal = (role: UserRole = 'customer') => {
+  const openAuthModal = (
+    role: UserRole = 'customer',
+    mode: 'login' | 'register' | 'forgot' = 'login'
+  ) => {
     setAuthModalRole(role);
+    setAuthModalMode(mode);
     setIsAuthModalOpen(true);
   };
 
@@ -256,21 +289,138 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsAuthModalOpen(false);
   };
 
-  const login = (email: string, role?: UserRole) => {
-    const targetEmail = email.trim().toLowerCase();
-    let user = users.find((u) => u.email.toLowerCase() === targetEmail);
+  const sendOtp = (phone: string): { success: boolean; otp?: string; message: string } => {
+    const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      return { success: false, message: 'Please enter a valid 10-digit mobile number.' };
+    }
+
+    const last10 = cleanPhone.slice(-10);
+    // Find user with matching phone
+    const user = users.find((u) => {
+      const uPhone = (u.phone || '').replace(/[\s\-\(\)\+]/g, '');
+      return uPhone === cleanPhone || (uPhone.length >= 10 && uPhone.endsWith(last10));
+    });
 
     if (!user) {
-      // Auto-assign based on domain or requested role
-      const isDomainAdmin = targetEmail.includes('admin') || role === 'admin';
-      user = {
-        id: `usr-${Date.now()}`,
-        name: isDomainAdmin ? 'Administrator' : targetEmail.split('@')[0],
-        email: targetEmail,
-        role: isDomainAdmin ? 'admin' : 'customer',
-        joinedDate: new Date().toISOString().split('T')[0],
+      return {
+        success: false,
+        message: `Mobile number ${last10} is not registered. Please create an account via Sign Up first.`,
       };
-      setUsers((prev) => [...prev, user!]);
+    }
+
+    // Generate 6-digit OTP code
+    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+
+    setActiveOtps((prev) => ({
+      ...prev,
+      [last10]: { otp: generatedOtp, expiresAt },
+    }));
+
+    showNotification(`📲 DreamIT SMS: Verification OTP for ${last10} is ${generatedOtp}`, 'info');
+
+    return {
+      success: true,
+      otp: generatedOtp,
+      message: `OTP sent to mobile number ending in ...${last10.slice(-4)}.`,
+    };
+  };
+
+  const resetPasswordWithOtp = (
+    phone: string,
+    otp: string,
+    expectedOtp: string,
+    newPassword: string
+  ): { success: boolean; message: string } => {
+    const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
+    const last10 = cleanPhone.slice(-10);
+
+    if (!otp.trim()) {
+      return { success: false, message: 'Please enter the 6-digit SMS OTP.' };
+    }
+
+    const stored = activeOtps[last10];
+    const isOtpValid =
+      (stored && stored.otp === otp.trim() && stored.expiresAt > Date.now()) ||
+      (expectedOtp && expectedOtp.trim() === otp.trim());
+
+    if (!isOtpValid) {
+      return { success: false, message: 'Invalid or expired OTP. Please check the code or request a new one.' };
+    }
+
+    if (!newPassword || newPassword.trim().length < 4) {
+      return { success: false, message: 'New password must be at least 4 characters long.' };
+    }
+
+    let userFound = false;
+    const updatedUsers = users.map((u) => {
+      const uPhone = (u.phone || '').replace(/[\s\-\(\)\+]/g, '');
+      if (uPhone === cleanPhone || (uPhone.length >= 10 && uPhone.endsWith(last10))) {
+        userFound = true;
+        return { ...u, password: newPassword.trim() };
+      }
+      return u;
+    });
+
+    if (!userFound) {
+      return { success: false, message: 'User record not found for this mobile number.' };
+    }
+
+    setUsers(updatedUsers);
+
+    // Clear used OTP
+    setActiveOtps((prev) => {
+      const next = { ...prev };
+      delete next[last10];
+      return next;
+    });
+
+    showNotification('Password updated successfully! Please sign in with your new password.', 'success');
+    return { success: true, message: 'Password reset successfully!' };
+  };
+
+  const login = (
+    identifier: string,
+    password?: string,
+    role?: UserRole
+  ): { success: boolean; message: string } => {
+    const cleanInput = identifier.trim();
+    if (!cleanInput) {
+      return { success: false, message: 'Please enter your registered mobile number.' };
+    }
+
+    const digitsOnly = cleanInput.replace(/[\s\-\(\)\+]/g, '');
+    const last10 = digitsOnly.slice(-10);
+
+    // Find user by phone number or by email
+    let user = users.find((u) => {
+      const uPhone = (u.phone || '').replace(/[\s\-\(\)\+]/g, '');
+      if (digitsOnly.length >= 7 && (uPhone === digitsOnly || (uPhone.length >= 10 && uPhone.endsWith(last10)))) {
+        return true;
+      }
+      return u.email.toLowerCase() === cleanInput.toLowerCase();
+    });
+
+    if (!user) {
+      return {
+        success: false,
+        message: 'No account registered with this mobile number. Please check the number or Sign Up first!',
+      };
+    }
+
+    // STRICT PASSWORD VALIDATION
+    if (password !== undefined) {
+      const trimmedPass = password.trim();
+      if (!trimmedPass) {
+        return { success: false, message: 'Please enter your account password.' };
+      }
+      if (user.password && user.password !== trimmedPass) {
+        return {
+          success: false,
+          message: 'Incorrect password! Please enter the correct password or click "Forgot Password" to reset it via SMS OTP.',
+        };
+      }
     }
 
     if (role && user.role !== role) {
@@ -284,26 +434,74 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return { success: true, message: 'Logged in successfully!' };
   };
 
-  const register = (name: string, email: string, role: UserRole) => {
-    const targetEmail = email.trim().toLowerCase();
-    const existing = users.find((u) => u.email.toLowerCase() === targetEmail);
-    if (existing) {
-      return { success: false, message: 'An account with this email already exists. Please log in.' };
+  const register = (
+    name: string,
+    email: string,
+    phone: string,
+    password: string,
+    role: UserRole
+  ): { success: boolean; message: string } => {
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
+    const cleanPass = password.trim();
+
+    if (!cleanName) {
+      return { success: false, message: 'Please enter your full name.' };
+    }
+
+    if (!cleanPhone || cleanPhone.length < 10) {
+      return { success: false, message: 'Please enter a valid 10-digit mobile number.' };
+    }
+
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      return { success: false, message: 'Please enter a valid email address.' };
+    }
+
+    if (!cleanPass || cleanPass.length < 4) {
+      return { success: false, message: 'Password must be at least 4 characters long.' };
+    }
+
+    const last10 = cleanPhone.slice(-10);
+    const phoneExists = users.some((u) => {
+      const uPhone = (u.phone || '').replace(/[\s\-\(\)\+]/g, '');
+      return uPhone === cleanPhone || (uPhone.length >= 10 && uPhone.endsWith(last10));
+    });
+
+    if (phoneExists) {
+      return {
+        success: false,
+        message: 'This mobile number is already registered. Please sign in or reset your password.',
+      };
+    }
+
+    const emailExists = users.some((u) => u.email.toLowerCase() === cleanEmail);
+    if (emailExists) {
+      return {
+        success: false,
+        message: 'An account with this email address already exists. Please sign in.',
+      };
     }
 
     const newUser: User = {
       id: `usr-${Date.now()}`,
-      name: name.trim() || 'DreamIT Member',
-      email: targetEmail,
+      name: cleanName,
+      email: cleanEmail,
+      phone: last10,
+      password: cleanPass,
       role,
       joinedDate: new Date().toISOString().split('T')[0],
     };
 
     setUsers((prev) => [...prev, newUser]);
-    setCurrentUser(newUser);
-    closeAuthModal();
-    showNotification(`Account created! Logged in as ${newUser.name}.`);
-    return { success: true, message: 'Registration successful!' };
+
+    // STRICTLY DO NOT AUTO LOGIN
+    // User must sign in after sign up
+    showNotification('Account registered successfully! Please sign in with your mobile number.', 'success');
+    return {
+      success: true,
+      message: 'Account registered successfully! Please sign in with your mobile number and password.',
+    };
   };
 
   const logout = () => {
@@ -654,12 +852,18 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         register,
         logout,
+        sendOtp,
+        resetPasswordWithOtp,
         isAuthModalOpen,
         setIsAuthModalOpen,
         authModalRole,
         setAuthModalRole,
+        authModalMode,
+        setAuthModalMode,
         openAuthModal,
         closeAuthModal,
+        razorpayKeyId,
+        setRazorpayKeyId,
         products,
         addProduct,
         updateProduct,

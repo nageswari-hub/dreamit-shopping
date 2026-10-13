@@ -13,6 +13,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone: string;
+  password?: string;
   role: UserRole;
   avatar?: string;
   joinedDate: string;
@@ -110,9 +112,10 @@ export interface Order {
   currency: CurrencyCode;
   customer: OrderCustomer;
   shippingMethod: ShippingMethod;
-  paymentMethod: 'card' | 'upi' | 'cod';
+  paymentMethod: 'card' | 'upi' | 'cod' | 'razorpay';
   status: OrderStatus;
   trackingNumber: string;
+  razorpayPaymentId?: string;
   cancellationReason?: string;
   cancelledAt?: string;
   returnReason?: string;

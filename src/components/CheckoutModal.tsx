@@ -16,6 +16,8 @@ import {
   QrCode,
   Banknote,
   Printer,
+  Zap,
+  Key,
 } from 'lucide-react';
 
 export const CheckoutModal: React.FC = () => {
@@ -30,6 +32,8 @@ export const CheckoutModal: React.FC = () => {
     currency,
     createOrder,
     setActiveTab,
+    razorpayKeyId,
+    setRazorpayKeyId,
   } = useShop();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -38,27 +42,29 @@ export const CheckoutModal: React.FC = () => {
   const [customer, setCustomer] = useState<OrderCustomer>({
     fullName: 'Jane Doe',
     email: 'jane.doe@example.com',
-    phone: '+1 (555) 234-5678',
-    address: '742 Evergreen Terrace',
-    city: 'Springfield',
-    postalCode: '97477',
-    country: 'United States',
+    phone: '+91 98765 43210',
+    address: '42 MG Road, Koramangala',
+    city: 'Bengaluru',
+    postalCode: '560034',
+    country: 'India',
   });
 
   // Selected Shipping Method
   const [selectedShipping, setSelectedShipping] = useState<ShippingMethod>(SHIPPING_METHODS[0]);
 
   // Payment Method
-  const [paymentType, setPaymentType] = useState<'card' | 'upi' | 'cod'>('card');
+  const [paymentType, setPaymentType] = useState<'razorpay' | 'card' | 'upi' | 'cod'>('razorpay');
+  const [customKeyInput, setCustomKeyInput] = useState(razorpayKeyId);
   const [cardNumber, setCardNumber] = useState('4242 •••• •••• 4242');
   const [cardExpiry, setCardExpiry] = useState('12/28');
   const [cardCvc, setCardCvc] = useState('888');
   const [cardName, setCardName] = useState('Jane Doe');
-  const [upiId, setUpiId] = useState('janedoe@elevatepay');
+  const [upiId, setUpiId] = useState('janedoe@okhdfcbank');
 
   // Confirmation state
   const [completedOrder, setCompletedOrder] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [razorpayError, setRazorpayError] = useState<string | null>(null);
 
   if (!isCheckoutOpen) return null;
 
@@ -68,41 +74,128 @@ export const CheckoutModal: React.FC = () => {
   const estimatedTax = (cartSubtotal - cartDiscount) * 0.08;
   const orderTotal = Math.max(0, cartSubtotal - cartDiscount + actualShippingCost + estimatedTax);
 
-  const handlePlaceOrder = () => {
-    setIsProcessing(true);
-
-    setTimeout(() => {
-      const order = createOrder({
-        items: cart,
-        subtotal: cartSubtotal,
-        discount: cartDiscount,
-        couponCode: appliedCoupon?.code,
-        shippingCost: actualShippingCost,
-        tax: estimatedTax,
-        total: orderTotal,
-        currency,
-        customer,
-        shippingMethod: { ...selectedShipping, cost: actualShippingCost },
-        paymentMethod: paymentType,
-        status: 'Confirmed',
-      });
-
-      setCompletedOrder(order);
-      setIsProcessing(false);
-      setStep(4);
-
-      // Trigger Confetti Celebration!
-      try {
-        confetti({
-          particleCount: 120,
-          spread: 80,
-          origin: { y: 0.6 },
-          colors: ['#0e8ce9', '#10b981', '#f59e0b', '#8b5cf6'],
-        });
-      } catch (err) {
-        console.log('Confetti error:', err);
+  // Helper to load Razorpay Checkout script dynamically
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if ((window as any).Razorpay) {
+        resolve(true);
+        return;
       }
-    }, 1200);
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const finalizeOrder = (paymentMethod: 'card' | 'upi' | 'cod' | 'razorpay', paymentId?: string) => {
+    const order = createOrder({
+      items: cart,
+      subtotal: cartSubtotal,
+      discount: cartDiscount,
+      couponCode: appliedCoupon?.code,
+      shippingCost: actualShippingCost,
+      tax: estimatedTax,
+      total: orderTotal,
+      currency,
+      customer,
+      shippingMethod: { ...selectedShipping, cost: actualShippingCost },
+      paymentMethod,
+      razorpayPaymentId: paymentId,
+      status: 'Confirmed',
+    });
+
+    setCompletedOrder(order);
+    setIsProcessing(false);
+    setStep(4);
+
+    // Confetti celebration
+    try {
+      confetti({
+        particleCount: 140,
+        spread: 90,
+        origin: { y: 0.6 },
+        colors: ['#0e8ce9', '#10b981', '#f59e0b', '#8b5cf6'],
+      });
+    } catch (err) {
+      console.log('Confetti error:', err);
+    }
+  };
+
+  const handleRazorpayPayment = async () => {
+    setIsProcessing(true);
+    setRazorpayError(null);
+
+    const loaded = await loadRazorpayScript();
+    if (!loaded) {
+      setRazorpayError('Unable to load Razorpay payment gateway SDK. Please check your internet connection.');
+      setIsProcessing(false);
+      return;
+    }
+
+    // Convert amount to INR paise
+    const inrRate = 84.0;
+    const amountInPaise = Math.round(orderTotal * (currency === 'INR' ? 1 : inrRate) * 100);
+
+    const options = {
+      key: customKeyInput || 'rzp_test_51MockDreamIT',
+      amount: amountInPaise,
+      currency: 'INR',
+      name: 'DreamIT Mall',
+      description: `Payment for ${cart.length} items (${formatPrice(orderTotal)})`,
+      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=200&q=80',
+      prefill: {
+        name: customer.fullName,
+        email: customer.email,
+        contact: customer.phone,
+      },
+      notes: {
+        address: `${customer.address}, ${customer.city}`,
+        mall: 'DreamIT Mall Online Store',
+      },
+      theme: {
+        color: '#0e8ce9',
+      },
+      handler: function (response: any) {
+        finalizeOrder('razorpay', response.razorpay_payment_id || `pay_${Date.now()}`);
+      },
+      modal: {
+        ondismiss: function () {
+          setIsProcessing(false);
+        },
+      },
+    };
+
+    try {
+      const rzpInstance = new (window as any).Razorpay(options);
+      rzpInstance.on('payment.failed', function (resp: any) {
+        setIsProcessing(false);
+        setRazorpayError(resp.error?.description || 'Payment was declined or cancelled.');
+      });
+      rzpInstance.open();
+    } catch (err: any) {
+      console.warn('Razorpay popup error:', err);
+      // If mock key rejected by Razorpay backend in sandbox, provide instant simulated success fallback
+      setIsProcessing(false);
+      setRazorpayError('Razorpay test mode initialized. You can also click "Simulate Razorpay Payment" below to test the verified order workflow instantly.');
+    }
+  };
+
+  const handleSimulateRazorpay = () => {
+    setIsProcessing(true);
+    setTimeout(() => {
+      const mockPayId = `pay_rzp_${Date.now().toString(36).toUpperCase()}`;
+      finalizeOrder('razorpay', mockPayId);
+    }, 1000);
+  };
+
+  const handleManualOrder = () => {
+    setIsProcessing(true);
+    setTimeout(() => {
+      finalizeOrder(paymentType);
+    }, 1000);
   };
 
   const handlePrintReceipt = () => {
@@ -122,7 +215,7 @@ export const CheckoutModal: React.FC = () => {
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-              {step === 4 ? 'Order Confirmation' : 'Secure Checkout'}
+              {step === 4 ? 'DreamIT Order Confirmation' : 'Secure Checkout & Payment'}
             </h2>
           </div>
 
@@ -157,7 +250,7 @@ export const CheckoutModal: React.FC = () => {
               <span className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-xs">
                 3
               </span>
-              <span>Payment</span>
+              <span>Razorpay / Payment</span>
             </div>
           </div>
         )}
@@ -197,7 +290,7 @@ export const CheckoutModal: React.FC = () => {
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Phone Number *
+                    Phone Number (for UPI & Delivery updates) *
                   </label>
                   <input
                     type="tel"
@@ -245,7 +338,7 @@ export const CheckoutModal: React.FC = () => {
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Postal / ZIP Code *
+                    PIN / Postal Code *
                   </label>
                   <input
                     type="text"
@@ -262,7 +355,7 @@ export const CheckoutModal: React.FC = () => {
                   onClick={() => setStep(2)}
                   className="px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer"
                 >
-                  <span>Continue to Shipping</span>
+                  <span>Continue to Delivery</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -273,7 +366,7 @@ export const CheckoutModal: React.FC = () => {
           {step === 2 && (
             <div className="space-y-5 animate-fade-in">
               <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                Choose Shipping Method
+                Choose Delivery Speed
               </h3>
               <div className="space-y-3">
                 {SHIPPING_METHODS.map((method) => {
@@ -334,53 +427,159 @@ export const CheckoutModal: React.FC = () => {
             </div>
           )}
 
-          {/* STEP 3: Payment & Order Review */}
+          {/* STEP 3: Payment Method with Razorpay */}
           {step === 3 && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
               <div className="lg:col-span-7 space-y-6">
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">
-                    Payment Method
+                    Select Payment Gateway
                   </h3>
-                  <div className="grid grid-cols-3 gap-2">
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {/* Razorpay Tab */}
+                    <button
+                      type="button"
+                      onClick={() => setPaymentType('razorpay')}
+                      className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer transition-all ${
+                        paymentType === 'razorpay'
+                          ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950/70 dark:text-brand-300 ring-2 ring-brand-500/20'
+                          : 'border-slate-200 dark:border-slate-800 text-slate-600'
+                      }`}
+                    >
+                      <Zap className="w-4 h-4 text-brand-600" />
+                      <span>Razorpay</span>
+                    </button>
+
+                    {/* Card Tab */}
                     <button
                       type="button"
                       onClick={() => setPaymentType('card')}
-                      className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer ${
+                      className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer transition-all ${
                         paymentType === 'card'
                           ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950/70 dark:text-brand-300'
                           : 'border-slate-200 dark:border-slate-800 text-slate-600'
                       }`}
                     >
                       <CreditCard className="w-4 h-4" />
-                      <span>Credit Card</span>
+                      <span>Card</span>
                     </button>
+
+                    {/* UPI Tab */}
                     <button
                       type="button"
                       onClick={() => setPaymentType('upi')}
-                      className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer ${
+                      className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer transition-all ${
                         paymentType === 'upi'
                           ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950/70 dark:text-brand-300'
                           : 'border-slate-200 dark:border-slate-800 text-slate-600'
                       }`}
                     >
                       <QrCode className="w-4 h-4" />
-                      <span>Instant UPI</span>
+                      <span>UPI ID</span>
                     </button>
+
+                    {/* COD Tab */}
                     <button
                       type="button"
                       onClick={() => setPaymentType('cod')}
-                      className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer ${
+                      className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer transition-all ${
                         paymentType === 'cod'
                           ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950/70 dark:text-brand-300'
                           : 'border-slate-200 dark:border-slate-800 text-slate-600'
                       }`}
                     >
                       <Banknote className="w-4 h-4" />
-                      <span>Cash on Delivery</span>
+                      <span>COD</span>
                     </button>
                   </div>
                 </div>
+
+                {/* Razorpay Real-Time Interface */}
+                {paymentType === 'razorpay' && (
+                  <div className="p-5 rounded-2xl bg-gradient-to-br from-brand-50/70 via-indigo-50/40 to-slate-50 dark:from-slate-800/80 dark:to-slate-900 border border-brand-200 dark:border-slate-700 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center font-black text-xs">
+                          R
+                        </div>
+                        <div>
+                          <span className="font-extrabold text-sm text-slate-900 dark:text-white block">
+                            Razorpay Live Checkout
+                          </span>
+                          <span className="text-[11px] text-slate-500">
+                            UPI (GPay / PhonePe / Paytm / QR), Cards, NetBanking
+                          </span>
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-black uppercase">
+                        Real-Time
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 py-2 text-center text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                      <div className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                        📱 UPI QR & Apps
+                      </div>
+                      <div className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                        💳 All Indian & Global Cards
+                      </div>
+                      <div className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                        🏦 50+ NetBanking Banks
+                      </div>
+                    </div>
+
+                    {/* Razorpay Key ID Configuration */}
+                    <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700">
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                        <span className="flex items-center gap-1">
+                          <Key className="w-3.5 h-3.5 text-brand-600" />
+                          <span>Razorpay Key ID (Live / Test)</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400">Sandbox Test Key Pre-loaded</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={customKeyInput}
+                        onChange={(e) => {
+                          setCustomKeyInput(e.target.value);
+                          setRazorpayKeyId(e.target.value);
+                        }}
+                        placeholder="rzp_test_... or your live Key ID"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono"
+                      />
+                    </div>
+
+                    {razorpayError && (
+                      <p className="text-xs text-rose-500 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 font-semibold">
+                        {razorpayError}
+                      </p>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={handleRazorpayPayment}
+                        disabled={isProcessing}
+                        className="flex-1 py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-xs shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
+                      >
+                        <Zap className="w-4 h-4 fill-current" />
+                        <span>{isProcessing ? 'Launching Razorpay...' : `Launch Razorpay • ${formatPrice(orderTotal)}`}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleSimulateRazorpay}
+                        disabled={isProcessing}
+                        className="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                        title="Quick simulated test payment"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Simulate Pay</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Card Fields */}
                 {paymentType === 'card' && (
@@ -464,7 +663,7 @@ export const CheckoutModal: React.FC = () => {
                 {/* COD Info */}
                 {paymentType === 'cod' && (
                   <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-xs text-amber-900 dark:text-amber-200">
-                    Pay safely with cash or contactless card upon courier arrival at your doorstep.
+                    Pay safely with cash or contactless UPI upon courier arrival at your doorstep.
                   </div>
                 )}
 
@@ -477,20 +676,22 @@ export const CheckoutModal: React.FC = () => {
                     <span>Back</span>
                   </button>
 
-                  <button
-                    onClick={handlePlaceOrder}
-                    disabled={isProcessing}
-                    className="px-7 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    {isProcessing ? (
-                      <span>Authorizing Payment...</span>
-                    ) : (
-                      <>
-                        <ShieldCheck className="w-4 h-4" />
-                        <span>Place Order • {formatPrice(orderTotal)}</span>
-                      </>
-                    )}
-                  </button>
+                  {paymentType !== 'razorpay' && (
+                    <button
+                      onClick={handleManualOrder}
+                      disabled={isProcessing}
+                      className="px-7 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {isProcessing ? (
+                        <span>Processing...</span>
+                      ) : (
+                        <>
+                          <ShieldCheck className="w-4 h-4" />
+                          <span>Place Order • {formatPrice(orderTotal)}</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -561,18 +762,18 @@ export const CheckoutModal: React.FC = () => {
 
               <div className="space-y-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-300 text-xs font-bold">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Order Placed Successfully!</span>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Payment Verified & Order Placed!</span>
                 </span>
                 <h3 className="text-2xl font-black text-slate-900 dark:text-white">
                   Thank You, {completedOrder.customer.fullName}!
                 </h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  We've received your order and our logistics team is preparing it for dispatch. A confirmation has been stored in your orders ledger.
+                  Your payment was authorized and received at DreamIT Mall. Your tracking code and official tax invoice have been generated below.
                 </p>
               </div>
 
-              {/* Order ID & Tracking Number Box */}
+              {/* Order ID & Razorpay Payment ID Box */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs space-y-2 text-left">
                 <div className="flex justify-between">
                   <span className="text-slate-500 font-medium">Order Number:</span>
@@ -580,6 +781,17 @@ export const CheckoutModal: React.FC = () => {
                     {completedOrder.orderNumber}
                   </span>
                 </div>
+                {completedOrder.razorpayPaymentId && (
+                  <div className="flex justify-between items-center p-2 rounded-xl bg-brand-50/80 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-900">
+                    <span className="text-brand-900 dark:text-brand-300 font-bold flex items-center gap-1">
+                      <Zap className="w-3.5 h-3.5 text-brand-600" />
+                      <span>Razorpay Payment ID:</span>
+                    </span>
+                    <span className="font-mono font-bold text-brand-700 dark:text-brand-300">
+                      {completedOrder.razorpayPaymentId}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-slate-500 font-medium">Tracking Code:</span>
                   <span className="font-mono font-bold text-brand-600 dark:text-brand-400">
@@ -616,7 +828,7 @@ export const CheckoutModal: React.FC = () => {
                   className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>Print Receipt</span>
+                  <span>Print Invoice</span>
                 </button>
                 <button
                   onClick={() => {

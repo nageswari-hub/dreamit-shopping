@@ -1,4 +1,27 @@
-import { Product, Coupon, ShippingMethod, CurrencyConfig } from '../types';
+import { Product, Coupon, ShippingMethod, CurrencyConfig, User } from '../types';
+
+export const AUTHORIZED_ADMIN_EMAIL = 'pokurinageswari@gmail.com';
+
+export const DEMO_USERS: User[] = [
+  {
+    id: 'usr-admin',
+    name: 'Nageswari (Admin)',
+    email: AUTHORIZED_ADMIN_EMAIL,
+    phone: '9876543210',
+    password: 'admin123',
+    role: 'admin',
+    joinedDate: '2026-01-01',
+  },
+  {
+    id: 'usr-customer',
+    name: 'Alex Mercer',
+    email: 'user@dreamit.com',
+    phone: '9123456789',
+    password: 'user123',
+    role: 'customer',
+    joinedDate: '2026-05-15',
+  },
+];
 
 export const CURRENCIES: Record<string, CurrencyConfig> = {
   USD: { code: 'USD', symbol: '$', name: 'US Dollar', rate: 1.0 },

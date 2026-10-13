@@ -95,7 +95,7 @@ export const AdminDashboard: React.FC = () => {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <button
-              onClick={() => login('admin@dreamit.com', 'admin')}
+              onClick={() => login('9876543210', 'admin123', 'admin')}
               className="w-full sm:w-auto px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <ShieldCheck className="w-4 h-4" />
