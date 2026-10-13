@@ -10,6 +10,7 @@ import { WishlistDrawer } from './components/WishlistDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { OrdersView } from './components/OrdersView';
 import { AdminDashboard } from './components/AdminDashboard';
+import { Footer } from './components/Footer';
 import { Toast } from './components/Toast';
 
 const StoreContent: React.FC = () => {
@@ -41,6 +42,7 @@ const StoreContent: React.FC = () => {
         </main>
       )}
 
+      <Footer />
       <ProductModal />
       <CartDrawer />
       <WishlistDrawer />
