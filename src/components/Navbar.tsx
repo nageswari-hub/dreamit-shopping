@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useShop } from '../context/ShopContext';
-import { CURRENCIES } from '../data/mockProducts';
+import { CURRENCIES, AUTHORIZED_ADMIN_EMAIL } from '../data/mockProducts';
 import { CurrencyCode } from '../types';
 import {
   ShoppingBag,
@@ -43,6 +43,10 @@ export const Navbar: React.FC = () => {
     logout,
     openAuthModal,
   } = useShop();
+
+  const isAdmin =
+    currentUser?.role === 'admin' &&
+    currentUser?.email?.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -285,7 +289,7 @@ export const Navbar: React.FC = () => {
             >
               <ShieldCheck className="w-4 h-4" />
               <span>Admin Portal</span>
-              {currentUser?.role !== 'admin' && (
+              {!isAdmin && (
                 <Lock className="w-3 h-3 text-slate-400" />
               )}
             </button>
@@ -400,7 +404,7 @@ export const Navbar: React.FC = () => {
                         </span>
                       </div>
 
-                      {currentUser.role === 'admin' ? (
+                      {isAdmin ? (
                         <button
                           onClick={() => {
                             setActiveTab('admin');

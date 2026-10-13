@@ -17,6 +17,7 @@ import {
   CURRENCIES,
   AVAILABLE_COUPONS,
   DEMO_USERS,
+  AUTHORIZED_ADMIN_EMAIL,
 } from '../data/mockProducts';
 import { getStorageItem, setStorageItem } from '../utils/storage';
 
@@ -122,11 +123,20 @@ const INITIAL_FILTERS: FilterState = {
 const normalizeStoredUsers = (saved: any): User[] => {
   if (!Array.isArray(saved) || saved.length === 0) return DEMO_USERS;
   return saved.map((u) => {
-    if (u.id === 'usr-admin' || u.email === 'admin@dreamit.com') {
+    // Dedicated Administrator: pokurinageswari@gmail.com
+    if (
+      u.id === 'usr-admin' ||
+      u.email.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase() ||
+      u.email.toLowerCase() === 'admin@dreamit.com'
+    ) {
       return {
         ...u,
+        id: 'usr-admin',
+        name: 'Nageswari (Admin)',
+        email: AUTHORIZED_ADMIN_EMAIL,
         phone: u.phone || '9876543210',
         password: u.password || 'admin123',
+        role: 'admin' as UserRole,
       };
     }
     if (u.id === 'usr-customer' || u.email === 'user@dreamit.com') {
@@ -134,10 +144,17 @@ const normalizeStoredUsers = (saved: any): User[] => {
         ...u,
         phone: u.phone || '9123456789',
         password: u.password || 'user123',
+        role: 'customer' as UserRole,
       };
     }
+    // STRICT SECURITY: Any other user MUST NOT have admin role!
+    const role: UserRole =
+      u.email.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase()
+        ? 'admin'
+        : 'customer';
     return {
       ...u,
+      role,
       phone: u.phone || '9999999999',
       password: u.password || 'password123',
     };
@@ -153,9 +170,28 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const rawUser = getStorageItem('dreamit_user', DEMO_USERS[1]);
     if (!rawUser) return null;
-    if (rawUser.id === 'usr-admin') return { ...rawUser, phone: rawUser.phone || '9876543210', password: rawUser.password || 'admin123' };
-    if (rawUser.id === 'usr-customer') return { ...rawUser, phone: rawUser.phone || '9123456789', password: rawUser.password || 'user123' };
-    return rawUser;
+    if (
+      rawUser.id === 'usr-admin' ||
+      rawUser.email.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase() ||
+      rawUser.email.toLowerCase() === 'admin@dreamit.com'
+    ) {
+      return {
+        ...rawUser,
+        id: 'usr-admin',
+        name: 'Nageswari (Admin)',
+        email: AUTHORIZED_ADMIN_EMAIL,
+        phone: rawUser.phone || '9876543210',
+        password: rawUser.password || 'admin123',
+        role: 'admin' as UserRole,
+      };
+    }
+    return {
+      ...rawUser,
+      role:
+        rawUser.email.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase()
+          ? ('admin' as UserRole)
+          : ('customer' as UserRole),
+    };
   });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalRole, setAuthModalRole] = useState<UserRole>('customer');
@@ -423,8 +459,12 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     }
 
-    if (role && user.role !== role) {
-      user = { ...user, role };
+    // Strict admin role authorization: ONLY pokurinageswari@gmail.com can be an administrator!
+    const isAuthorizedAdmin = user.email.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase();
+    const effectiveRole: UserRole = isAuthorizedAdmin ? (role === 'admin' ? 'admin' : user.role) : 'customer';
+
+    if (user.role !== effectiveRole) {
+      user = { ...user, role: effectiveRole };
       setUsers((prev) => prev.map((u) => (u.id === user!.id ? user! : u)));
     }
 
@@ -483,13 +523,26 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
     }
 
+    // Strict admin role check: ONLY pokurinageswari@gmail.com can be an administrator!
+    let assignedRole: UserRole = 'customer';
+    if (role === 'admin') {
+      if (cleanEmail === AUTHORIZED_ADMIN_EMAIL.toLowerCase()) {
+        assignedRole = 'admin';
+      } else {
+        return {
+          success: false,
+          message: `Administrator access is strictly restricted to ${AUTHORIZED_ADMIN_EMAIL}. Other accounts can only register as Customers.`,
+        };
+      }
+    }
+
     const newUser: User = {
       id: `usr-${Date.now()}`,
       name: cleanName,
       email: cleanEmail,
       phone: last10,
       password: cleanPass,
-      role,
+      role: assignedRole,
       joinedDate: new Date().toISOString().split('T')[0],
     };
 

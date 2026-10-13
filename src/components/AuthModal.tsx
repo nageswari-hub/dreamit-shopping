@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useShop } from '../context/ShopContext';
 import { UserRole } from '../types';
+import { AUTHORIZED_ADMIN_EMAIL } from '../data/mockProducts';
 import {
   X,
   User,
@@ -120,6 +121,10 @@ export const AuthModal: React.FC = () => {
     }
     if (password !== confirmPassword) {
       setError('Passwords do not match. Please verify your confirmation password.');
+      return;
+    }
+    if (authModalRole === 'admin' && email.trim().toLowerCase() !== AUTHORIZED_ADMIN_EMAIL.toLowerCase()) {
+      setError(`Administrator registration is strictly restricted to ${AUTHORIZED_ADMIN_EMAIL}. Other accounts can only register as Customers.`);
       return;
     }
 
@@ -527,6 +532,13 @@ export const AuthModal: React.FC = () => {
                 </div>
               </div>
 
+              {authModalRole === 'admin' && (
+                <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-[11px] text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 animate-fade-in">
+                  <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>Admin portal is strictly restricted to: <strong>{AUTHORIZED_ADMIN_EMAIL}</strong></span>
+                </div>
+              )}
+
               {/* Fast 1-Click Demo Logins */}
               <div className="p-3.5 rounded-2xl bg-gradient-to-r from-brand-50 to-indigo-50 dark:from-brand-950/40 dark:to-indigo-950/40 border border-brand-200/80 dark:border-brand-900/60 text-xs space-y-2">
                 <div className="flex items-center justify-between">
@@ -551,8 +563,9 @@ export const AuthModal: React.FC = () => {
                     onClick={() => handleQuickDemo('admin')}
                     className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 text-left transition-all cursor-pointer group"
                   >
-                    <div className="text-[10px] font-extrabold uppercase text-emerald-600">Administrator</div>
+                    <div className="text-[10px] font-extrabold uppercase text-emerald-600">Administrator (Nageswari)</div>
                     <div className="font-bold text-slate-900 dark:text-white text-[11px]">9876543210</div>
+                    <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium truncate">{AUTHORIZED_ADMIN_EMAIL}</div>
                     <div className="text-[10px] text-slate-400">Pass: admin123</div>
                   </button>
                 </div>
@@ -683,6 +696,13 @@ export const AuthModal: React.FC = () => {
                   </button>
                 </div>
               </div>
+
+              {authModalRole === 'admin' && (
+                <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-1.5 animate-fade-in">
+                  <Lock className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>Admin registration is strictly authorized only for: <strong>{AUTHORIZED_ADMIN_EMAIL}</strong></span>
+                </div>
+              )}
 
               {/* Registration Form */}
               <form onSubmit={handleRegisterSubmit} className="space-y-3.5 text-xs">

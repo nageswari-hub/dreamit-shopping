@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
 import { Product } from '../types';
+import { AUTHORIZED_ADMIN_EMAIL } from '../data/mockProducts';
 import {
   TrendingUp,
   ShoppingBag,
@@ -53,8 +54,10 @@ export const AdminDashboard: React.FC = () => {
     tags: 'tech, premium',
   });
 
-  // Access Control Guard: Only users with role === 'admin' can view
-  const isAdmin = currentUser?.role === 'admin';
+  // Access Control Guard: Only pokurinageswari@gmail.com can access admin portal
+  const isAdmin =
+    currentUser?.role === 'admin' &&
+    currentUser?.email?.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase();
 
   if (!isAdmin) {
     return (
@@ -73,7 +76,7 @@ export const AdminDashboard: React.FC = () => {
               Administrator Privileges Required
             </h2>
             <p className="text-xs text-slate-500 leading-relaxed max-w-md mx-auto">
-              The DreamIT Mall Management Portal is strictly restricted to store administrators. Regular customers do not have permission to view sales ledgers or modify inventory.
+              The DreamIT Mall Management Portal is strictly restricted to authorized store administrator (<strong>{AUTHORIZED_ADMIN_EMAIL}</strong>). Regular customers do not have permission to view sales ledgers or modify inventory.
             </p>
           </div>
 
@@ -82,14 +85,14 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-slate-400" />
                 <span className="text-slate-600 dark:text-slate-300">
-                  Signed in as: <strong>{currentUser.name}</strong> ({currentUser.role.toUpperCase()})
+                  Signed in as: <strong>{currentUser.name}</strong> ({currentUser.email})
                 </span>
               </div>
               <span className="text-rose-500 font-bold">Access Denied</span>
             </div>
           ) : (
             <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-200">
-              You are currently browsing as a guest. Please sign in with an Administrator account.
+              You are currently browsing as a guest. Please sign in with the authorized Administrator account (<strong>{AUTHORIZED_ADMIN_EMAIL}</strong>).
             </div>
           )}
 
@@ -99,7 +102,7 @@ export const AdminDashboard: React.FC = () => {
               className="w-full sm:w-auto px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>Log in as Admin (1-Click Demo)</span>
+              <span>Log in as Administrator ({AUTHORIZED_ADMIN_EMAIL})</span>
             </button>
             <button
               onClick={() => openAuthModal('admin')}
