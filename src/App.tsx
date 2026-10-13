@@ -1,22 +1,30 @@
-import { ShopProvider, useShop } from './context/ShopContext';
+import React from 'react';
+import { ShopProvider } from './context/ShopContext';
+import { Navbar } from './components/Navbar';
+import { HeroBanner } from './components/HeroBanner';
+import { CategoryNav } from './components/CategoryNav';
+import { Toast } from './components/Toast';
 
-function StoreMain() {
-  const { products, currency, formatPrice } = useShop();
-
+const StoreContent: React.FC = () => {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-8 text-slate-800 dark:text-slate-100">
-      <h1 className="text-3xl font-extrabold tracking-tight">ElevateStore Engine Active</h1>
-      <p className="mt-2 text-slate-600 dark:text-slate-400">
-        Loaded {products.length} products. Active currency: {currency} (e.g. {formatPrice(100)})
-      </p>
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+      <Navbar />
+      <HeroBanner />
+      <CategoryNav />
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full" id="product-catalog">
+        <div className="p-8 text-center text-slate-500">
+          Product Catalog & Filters Loading in Milestone 4...
+        </div>
+      </main>
+      <Toast />
     </div>
   );
-}
+};
 
 export default function App() {
   return (
     <ShopProvider>
-      <StoreMain />
+      <StoreContent />
     </ShopProvider>
   );
 }
