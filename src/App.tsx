@@ -4,6 +4,7 @@ import { Navbar } from './components/Navbar';
 import { HeroBanner } from './components/HeroBanner';
 import { CategoryNav } from './components/CategoryNav';
 import { ProductGrid } from './components/ProductGrid';
+import { ProductModal } from './components/ProductModal';
 import { Toast } from './components/Toast';
 
 const StoreContent: React.FC = () => {
@@ -35,6 +36,7 @@ const StoreContent: React.FC = () => {
         </main>
       )}
 
+      <ProductModal />
       <Toast />
     </div>
   );
