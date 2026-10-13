@@ -95,8 +95,28 @@ export type OrderStatus =
   | 'Shipped'
   | 'Delivered'
   | 'Cancelled'
+  | 'Cancellation Requested'
   | 'Return Requested'
   | 'Returned';
+
+export type RefundStatus =
+  | 'Pending Admin Approval'
+  | 'Awaiting Parcel Return'
+  | 'Refund Issued'
+  | 'Not Applicable';
+
+export interface RefundAccountDetails {
+  accountHolderName: string;
+  accountNumber: string;
+  ifscCode: string;
+  bankName?: string;
+  upiId?: string;
+  requestedAt: string;
+  refundStatus: RefundStatus;
+  refundIssuedAt?: string;
+  refundTransactionId?: string;
+  parcelReturnedAt?: string;
+}
 
 export interface Order {
   id: string;
@@ -121,6 +141,7 @@ export interface Order {
   returnReason?: string;
   returnRequestedAt?: string;
   returnApprovedAt?: string;
+  refundDetails?: RefundAccountDetails;
 }
 
 export interface FilterState {

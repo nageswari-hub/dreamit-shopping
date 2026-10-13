@@ -208,9 +208,9 @@ export const AuthModal: React.FC = () => {
     setError(null);
     setSuccessMsg(null);
     if (role === 'admin') {
-      setPhone('9876543210');
+      setPhone('7013304012');
       setPassword('admin123');
-      login('9876543210', 'admin123', 'admin');
+      login('7013304012', 'admin123', 'admin');
     } else {
       setPhone('9123456789');
       setPassword('user123');
@@ -347,7 +347,7 @@ export const AuthModal: React.FC = () => {
                       />
                     </div>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      Demo numbers: <code className="text-brand-600 dark:text-brand-400 font-bold">9123456789</code> (Customer) or <code className="text-emerald-600 dark:text-emerald-400 font-bold">9876543210</code> (Admin)
+                      Demo numbers: <code className="text-brand-600 dark:text-brand-400 font-bold">9123456789</code> (Customer) or <code className="text-emerald-600 dark:text-emerald-400 font-bold">7013304012</code> (Admin)
                     </p>
                   </div>
 
@@ -564,7 +564,7 @@ export const AuthModal: React.FC = () => {
                     className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 text-left transition-all cursor-pointer group"
                   >
                     <div className="text-[10px] font-extrabold uppercase text-emerald-600">Administrator (Nageswari)</div>
-                    <div className="font-bold text-slate-900 dark:text-white text-[11px]">9876543210</div>
+                    <div className="font-bold text-slate-900 dark:text-white text-[11px]">7013304012</div>
                     <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium truncate">{AUTHORIZED_ADMIN_EMAIL}</div>
                     <div className="text-[10px] text-slate-400">Pass: admin123</div>
                   </button>

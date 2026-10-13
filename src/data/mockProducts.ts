@@ -7,7 +7,7 @@ export const DEMO_USERS: User[] = [
     id: 'usr-admin',
     name: 'Nageswari (Admin)',
     email: AUTHORIZED_ADMIN_EMAIL,
-    phone: '9876543210',
+    phone: '7013304012',
     password: 'admin123',
     role: 'admin',
     joinedDate: '2026-01-01',

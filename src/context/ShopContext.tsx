@@ -4,6 +4,8 @@ import {
   CartItem,
   Order,
   OrderStatus,
+  RefundStatus,
+  RefundAccountDetails,
   Review,
   Coupon,
   CurrencyCode,
@@ -73,7 +75,19 @@ interface ShopContextType {
   // Orders & Lifecycle
   orders: Order[];
   createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'trackingNumber'>) => Order;
-  cancelOrder: (orderId: string, reason?: string) => { success: boolean; message: string };
+  cancelOrder: (
+    orderId: string,
+    reason?: string,
+    bankDetails?: {
+      accountHolderName?: string;
+      accountNumber?: string;
+      ifscCode?: string;
+      bankName?: string;
+      upiId?: string;
+    }
+  ) => { success: boolean; message: string };
+  approveRefund: (orderId: string) => { success: boolean; message: string };
+  confirmParcelReturnedAndRefund: (orderId: string) => { success: boolean; message: string };
   requestReturn: (orderId: string, reason?: string) => { success: boolean; message: string };
   approveReturn: (orderId: string) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
@@ -134,7 +148,7 @@ const normalizeStoredUsers = (saved: any): User[] => {
         id: 'usr-admin',
         name: 'Nageswari (Admin)',
         email: AUTHORIZED_ADMIN_EMAIL,
-        phone: u.phone || '9876543210',
+        phone: u.phone === '9876543210' ? '7013304012' : (u.phone || '7013304012'),
         password: u.password || 'admin123',
         role: 'admin' as UserRole,
       };
@@ -180,7 +194,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         id: 'usr-admin',
         name: 'Nageswari (Admin)',
         email: AUTHORIZED_ADMIN_EMAIL,
-        phone: rawUser.phone || '9876543210',
+        phone: rawUser.phone === '9876543210' ? '7013304012' : (rawUser.phone || '7013304012'),
         password: rawUser.password || 'admin123',
         role: 'admin' as UserRole,
       };
@@ -720,7 +734,17 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return newOrder;
   };
 
-  const cancelOrder = (orderId: string, reason = 'Customer requested cancellation') => {
+  const cancelOrder = (
+    orderId: string,
+    reason = 'Customer requested cancellation',
+    bankDetails?: {
+      accountHolderName?: string;
+      accountNumber?: string;
+      ifscCode?: string;
+      bankName?: string;
+      upiId?: string;
+    }
+  ) => {
     const order = orders.find((o) => o.id === orderId);
     if (!order) return { success: false, message: 'Order not found.' };
 
@@ -731,7 +755,69 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
     }
 
-    // Re-stock product items!
+    const isCod = order.paymentMethod === 'cod';
+
+    // Status differentiation:
+    // Online Payment -> 'Cancellation Requested' with 'Pending Admin Approval'
+    // Cash on Delivery -> 'Cancelled' with 'Awaiting Parcel Return'
+    const updatedStatus: OrderStatus = isCod ? 'Cancelled' : 'Cancellation Requested';
+    const refundStatus: RefundStatus = isCod ? 'Awaiting Parcel Return' : 'Pending Admin Approval';
+
+    const refundDetails: RefundAccountDetails = {
+      accountHolderName: bankDetails?.accountHolderName?.trim() || order.customer.fullName,
+      accountNumber: bankDetails?.accountNumber?.trim() || 'N/A',
+      ifscCode: bankDetails?.ifscCode?.trim() || 'N/A',
+      bankName: bankDetails?.bankName?.trim() || '',
+      upiId: bankDetails?.upiId?.trim() || '',
+      requestedAt: new Date().toISOString(),
+      refundStatus,
+    };
+
+    // Update order status
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              status: updatedStatus,
+              cancellationReason: reason,
+              cancelledAt: new Date().toISOString(),
+              refundDetails,
+            }
+          : o
+      )
+    );
+
+    if (isCod) {
+      showNotification(
+        `Order ${order.orderNumber} cancelled. For Cash on Delivery, refund will be issued to your bank account only after the parcel is returned to our warehouse.`,
+        'info'
+      );
+      return {
+        success: true,
+        message: 'Order cancelled. Refund will be issued when the parcel is returned.',
+      };
+    } else {
+      showNotification(
+        `Cancellation request for Order ${order.orderNumber} submitted with account details. Administrator will verify and issue your refund.`,
+        'success'
+      );
+      return {
+        success: true,
+        message: 'Cancellation requested. Awaiting administrator acceptance to issue refund.',
+      };
+    }
+  };
+
+  // Administrator accepts online payment cancellation & issues refund
+  const approveRefund = (orderId: string) => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return { success: false, message: 'Order not found.' };
+
+    const refundTxnId = 'RFND-ONL-' + Math.floor(100000 + Math.random() * 900000);
+    const now = new Date().toISOString();
+
+    // Restock product items!
     setProducts((prev) =>
       prev.map((prod) => {
         const item = order.items.find((it) => it.product.id === prod.id);
@@ -742,22 +828,93 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       })
     );
 
-    // Update order status
     setOrders((prev) =>
       prev.map((o) =>
         o.id === orderId
           ? {
               ...o,
               status: 'Cancelled',
-              cancellationReason: reason,
-              cancelledAt: new Date().toISOString(),
+              refundDetails: o.refundDetails
+                ? {
+                    ...o.refundDetails,
+                    refundStatus: 'Refund Issued',
+                    refundIssuedAt: now,
+                    refundTransactionId: refundTxnId,
+                  }
+                : {
+                    accountHolderName: o.customer.fullName,
+                    accountNumber: 'N/A',
+                    ifscCode: 'N/A',
+                    requestedAt: now,
+                    refundStatus: 'Refund Issued',
+                    refundIssuedAt: now,
+                    refundTransactionId: refundTxnId,
+                  },
             }
           : o
       )
     );
 
-    showNotification(`Order ${order.orderNumber} has been cancelled and items restocked!`, 'info');
-    return { success: true, message: 'Order successfully cancelled.' };
+    showNotification(
+      `Cancellation accepted for Order ${order.orderNumber}! Refund issued (Ref: ${refundTxnId}). Inventory restocked.`,
+      'success'
+    );
+    return { success: true, message: 'Refund successfully issued to customer.' };
+  };
+
+  // Administrator confirms COD parcel returned & issues refund
+  const confirmParcelReturnedAndRefund = (orderId: string) => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return { success: false, message: 'Order not found.' };
+
+    const refundTxnId = 'COD-RFND-' + Math.floor(100000 + Math.random() * 900000);
+    const now = new Date().toISOString();
+
+    // Restock items upon physical parcel return!
+    setProducts((prev) =>
+      prev.map((prod) => {
+        const item = order.items.find((it) => it.product.id === prod.id);
+        if (item) {
+          return { ...prod, stock: prod.stock + item.quantity };
+        }
+        return prod;
+      })
+    );
+
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              status: 'Cancelled',
+              refundDetails: o.refundDetails
+                ? {
+                    ...o.refundDetails,
+                    parcelReturnedAt: now,
+                    refundStatus: 'Refund Issued',
+                    refundIssuedAt: now,
+                    refundTransactionId: refundTxnId,
+                  }
+                : {
+                    accountHolderName: o.customer.fullName,
+                    accountNumber: 'N/A',
+                    ifscCode: 'N/A',
+                    requestedAt: now,
+                    parcelReturnedAt: now,
+                    refundStatus: 'Refund Issued',
+                    refundIssuedAt: now,
+                    refundTransactionId: refundTxnId,
+                  },
+            }
+          : o
+      )
+    );
+
+    showNotification(
+      `Parcel return confirmed for COD Order ${order.orderNumber}! Refund issued (Ref: ${refundTxnId}). Inventory restocked.`,
+      'success'
+    );
+    return { success: true, message: 'Parcel return confirmed and refund issued.' };
   };
 
   const requestReturn = (orderId: string, reason = 'Dissatisfied with item condition or fit') => {
@@ -941,6 +1098,8 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         orders,
         createOrder,
         cancelOrder,
+        approveRefund,
+        confirmParcelReturnedAndRefund,
         requestReturn,
         approveReturn,
         updateOrderStatus,
