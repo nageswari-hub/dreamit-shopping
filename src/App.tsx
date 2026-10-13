@@ -7,6 +7,7 @@ import { ProductGrid } from './components/ProductGrid';
 import { ProductModal } from './components/ProductModal';
 import { CartDrawer } from './components/CartDrawer';
 import { WishlistDrawer } from './components/WishlistDrawer';
+import { CheckoutModal } from './components/CheckoutModal';
 import { Toast } from './components/Toast';
 
 const StoreContent: React.FC = () => {
@@ -41,6 +42,7 @@ const StoreContent: React.FC = () => {
       <ProductModal />
       <CartDrawer />
       <WishlistDrawer />
+      <CheckoutModal />
       <Toast />
     </div>
   );
