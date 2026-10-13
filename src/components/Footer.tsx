@@ -17,7 +17,7 @@ export const Footer: React.FC = () => {
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
-    showNotification('Thank you for subscribing! Your 15% VIP discount code is VIP15.', 'success');
+    showNotification('Welcome to DreamIT VIP Circle! Your 15% promo code is DREAMIT15.', 'success');
     setEmail('');
   };
 
@@ -30,18 +30,18 @@ export const Footer: React.FC = () => {
   return (
     <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 transition-colors mt-auto">
       {/* Newsletter VIP Banner */}
-      <div className="bg-gradient-to-r from-brand-900 via-indigo-950 to-slate-950 text-white py-12 px-4 sm:px-6 lg:px-8 border-b border-white/10">
+      <div className="bg-gradient-to-r from-brand-950 via-indigo-950 to-slate-950 text-white py-12 px-4 sm:px-6 lg:px-8 border-b border-white/10">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
           <div className="md:col-span-7 space-y-2">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-amber-300 text-xs font-bold tracking-wide">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>VIP Privilege Circle</span>
+              <span>DreamIT VIP Circle</span>
             </div>
             <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Unlock 15% Off Your First Purchase
+              Unlock 15% Off Your First DreamIT Order
             </h3>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
-              Subscribe to receive private preview drops, bespoke styling lookbooks, and exclusive seasonal promotions.
+              Subscribe to receive private preview drops, limited-edition flash sales, and seasonal discount coupons.
             </p>
           </div>
 
@@ -77,11 +77,11 @@ export const Footer: React.FC = () => {
                 <ShoppingBag className="w-4 h-4" />
               </div>
               <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
-                ELEVATE
+                DreamIT Mall
               </span>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm leading-relaxed">
-              Curated everyday luxury engineering. Built with a local-first browser architecture with persistent storage, zero database overhead, and instant responsiveness.
+              Your digital department store for curated technology, lifestyle fashion, and modern home essentials. Zero external database requirement with instant local-first persistence.
             </p>
             <div className="flex items-center gap-4 text-xs text-slate-500">
               <span className="flex items-center gap-1">
@@ -96,7 +96,7 @@ export const Footer: React.FC = () => {
           {/* Quick Categories */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-3">
-              Collections
+              Mall Departments
             </h4>
             <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
               <li>
@@ -145,7 +145,7 @@ export const Footer: React.FC = () => {
           {/* Customer Portal */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-3">
-              Store Access
+              Customer Care
             </h4>
             <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
               <li>
@@ -156,7 +156,7 @@ export const Footer: React.FC = () => {
                   }}
                   className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer"
                 >
-                  Catalog Explorer
+                  Explore All Products
                 </button>
               </li>
               <li>
@@ -167,7 +167,18 @@ export const Footer: React.FC = () => {
                   }}
                   className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer"
                 >
-                  Track Shipments
+                  Track & Cancel Orders
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    setActiveTab('orders');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer"
+                >
+                  Request Item Returns
                 </button>
               </li>
               <li>
@@ -178,7 +189,7 @@ export const Footer: React.FC = () => {
                   }}
                   className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer"
                 >
-                  Merchant Dashboard
+                  Administrator Portal
                 </button>
               </li>
             </ul>
@@ -187,7 +198,7 @@ export const Footer: React.FC = () => {
           {/* Guarantees */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-3">
-              Commitment
+              Guarantees
             </h4>
             <ul className="space-y-2.5 text-xs text-slate-600 dark:text-slate-400">
               <li className="flex items-center gap-2">
@@ -200,7 +211,7 @@ export const Footer: React.FC = () => {
               </li>
               <li className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>2-Year Manufacturer Warranty</span>
+                <span>Instant Order Cancellations</span>
               </li>
             </ul>
           </div>
@@ -208,13 +219,13 @@ export const Footer: React.FC = () => {
 
         {/* Bottom Sub-bar */}
         <div className="pt-8 mt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <p>© {new Date().getFullYear()} Elevate Store Platform. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} DreamIT Mall. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <span className="font-semibold text-slate-700 dark:text-slate-300">
               Local-First Web Architecture
             </span>
             <span>•</span>
-            <span>Privacy Preserved (No DB Required)</span>
+            <span>Customer & Admin Portals</span>
           </div>
         </div>
       </div>

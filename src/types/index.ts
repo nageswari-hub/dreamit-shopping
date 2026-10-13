@@ -7,6 +7,17 @@ export interface CurrencyConfig {
   rate: number; // against 1 USD
 }
 
+export type UserRole = 'customer' | 'admin';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  avatar?: string;
+  joinedDate: string;
+}
+
 export interface ProductVariantColor {
   name: string;
   hex: string;
@@ -76,6 +87,15 @@ export interface OrderCustomer {
   country: string;
 }
 
+export type OrderStatus =
+  | 'Confirmed'
+  | 'Processing'
+  | 'Shipped'
+  | 'Delivered'
+  | 'Cancelled'
+  | 'Return Requested'
+  | 'Returned';
+
 export interface Order {
   id: string;
   orderNumber: string;
@@ -91,8 +111,13 @@ export interface Order {
   customer: OrderCustomer;
   shippingMethod: ShippingMethod;
   paymentMethod: 'card' | 'upi' | 'cod';
-  status: 'Confirmed' | 'Processing' | 'Shipped' | 'Delivered';
+  status: OrderStatus;
   trackingNumber: string;
+  cancellationReason?: string;
+  cancelledAt?: string;
+  returnReason?: string;
+  returnRequestedAt?: string;
+  returnApprovedAt?: string;
 }
 
 export interface FilterState {
@@ -102,5 +127,5 @@ export interface FilterState {
   maxPrice: number;
   minRating: number;
   inStockOnly: boolean;
-  sortBy: 'featured' | 'price-low' | 'price-high' | 'rating' | 'newest';
+  sortBy: 'featured' | 'price-low' | 'price-high' | 'rating' | 'newest' | 'discount';
 }

@@ -3,10 +3,13 @@ import {
   Product,
   CartItem,
   Order,
+  OrderStatus,
   Review,
   Coupon,
   CurrencyCode,
   FilterState,
+  User,
+  UserRole,
 } from '../types';
 import {
   INITIAL_PRODUCTS,
@@ -16,36 +19,85 @@ import {
 } from '../data/mockProducts';
 import { getStorageItem, setStorageItem } from '../utils/storage';
 
+export const DEMO_USERS: User[] = [
+  {
+    id: 'usr-admin',
+    name: 'DreamIT Admin',
+    email: 'admin@dreamit.com',
+    role: 'admin',
+    joinedDate: '2026-01-01',
+  },
+  {
+    id: 'usr-customer',
+    name: 'Alex Mercer',
+    email: 'user@dreamit.com',
+    role: 'customer',
+    joinedDate: '2026-05-15',
+  },
+];
+
 interface ShopContextType {
+  // Auth
+  currentUser: User | null;
+  users: User[];
+  login: (email: string, role?: UserRole) => { success: boolean; message: string };
+  register: (name: string, email: string, role: UserRole) => { success: boolean; message: string };
+  logout: () => void;
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  authModalRole: UserRole;
+  setAuthModalRole: (role: UserRole) => void;
+  openAuthModal: (role?: UserRole) => void;
+  closeAuthModal: () => void;
+
+  // Products
   products: Product[];
+  addProduct: (product: Omit<Product, 'id' | 'rating' | 'reviewsCount'>) => void;
+  updateProduct: (product: Product) => void;
+  deleteProduct: (productId: string) => void;
+  resetToDefaults: () => void;
+
+  // Cart
   cart: CartItem[];
-  wishlist: string[];
-  orders: Order[];
-  reviews: Record<string, Review[]>;
-  currency: CurrencyCode;
-  setCurrency: (c: CurrencyCode) => void;
-  formatPrice: (amountInUSD: number) => string;
-  convertPrice: (amountInUSD: number) => number;
-  appliedCoupon: Coupon | null;
-  applyCoupon: (code: string) => { success: boolean; message: string };
-  removeCoupon: () => void;
+  addToCart: (product: Product, quantity?: number, color?: string, size?: string) => void;
+  updateCartQuantity: (cartItemId: string, quantity: number) => void;
+  removeFromCart: (cartItemId: string) => void;
+  clearCart: () => void;
   cartSubtotal: number;
   cartDiscount: number;
   cartCount: number;
   freeShippingThreshold: number;
   freeShippingGap: number;
-  addToCart: (product: Product, quantity?: number, color?: string, size?: string) => void;
-  updateCartQuantity: (cartItemId: string, quantity: number) => void;
-  removeFromCart: (cartItemId: string) => void;
-  clearCart: () => void;
+
+  // Wishlist
+  wishlist: string[];
   toggleWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
+
+  // Coupons
+  appliedCoupon: Coupon | null;
+  applyCoupon: (code: string) => { success: boolean; message: string };
+  removeCoupon: () => void;
+
+  // Orders & Lifecycle
+  orders: Order[];
   createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'trackingNumber'>) => Order;
+  cancelOrder: (orderId: string, reason?: string) => { success: boolean; message: string };
+  requestReturn: (orderId: string, reason?: string) => { success: boolean; message: string };
+  approveReturn: (orderId: string) => void;
+  updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+
+  // Reviews
+  reviews: Record<string, Review[]>;
   addReview: (productId: string, userName: string, rating: number, comment: string) => void;
-  addProduct: (product: Omit<Product, 'id' | 'rating' | 'reviewsCount'>) => void;
-  updateProduct: (product: Product) => void;
-  deleteProduct: (productId: string) => void;
-  resetToDefaults: () => void;
+
+  // Currency
+  currency: CurrencyCode;
+  setCurrency: (c: CurrencyCode) => void;
+  formatPrice: (amountInUSD: number) => string;
+  convertPrice: (amountInUSD: number) => number;
+
+  // UI Modals & Navigation
   selectedProduct: Product | null;
   setSelectedProduct: (p: Product | null) => void;
   isCartOpen: boolean;
@@ -78,44 +130,54 @@ const INITIAL_FILTERS: FilterState = {
 };
 
 export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Authentication
+  const [users, setUsers] = useState<User[]>(() =>
+    getStorageItem('dreamit_users', DEMO_USERS)
+  );
+  const [currentUser, setCurrentUser] = useState<User | null>(() =>
+    getStorageItem('dreamit_user', DEMO_USERS[1]) // Default to Alex Mercer (Customer) for instant convenience
+  );
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalRole, setAuthModalRole] = useState<UserRole>('customer');
+
   // Products
   const [products, setProducts] = useState<Product[]>(() =>
-    getStorageItem('elevate_products', INITIAL_PRODUCTS)
+    getStorageItem('dreamit_products', getStorageItem('elevate_products', INITIAL_PRODUCTS))
   );
 
   // Cart
   const [cart, setCart] = useState<CartItem[]>(() =>
-    getStorageItem('elevate_cart', [])
+    getStorageItem('dreamit_cart', getStorageItem('elevate_cart', []))
   );
 
   // Wishlist
   const [wishlist, setWishlist] = useState<string[]>(() =>
-    getStorageItem('elevate_wishlist', [])
+    getStorageItem('dreamit_wishlist', getStorageItem('elevate_wishlist', []))
   );
 
   // Orders
   const [orders, setOrders] = useState<Order[]>(() =>
-    getStorageItem('elevate_orders', [])
+    getStorageItem('dreamit_orders', getStorageItem('elevate_orders', []))
   );
 
   // Reviews
   const [reviews, setReviews] = useState<Record<string, Review[]>>(() =>
-    getStorageItem('elevate_reviews', INITIAL_REVIEWS)
+    getStorageItem('dreamit_reviews', getStorageItem('elevate_reviews', INITIAL_REVIEWS))
   );
 
   // Currency
   const [currency, setCurrency] = useState<CurrencyCode>(() =>
-    getStorageItem('elevate_currency', 'USD')
+    getStorageItem('dreamit_currency', 'USD')
   );
 
   // Coupon
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(() =>
-    getStorageItem('elevate_coupon', null)
+    getStorageItem('dreamit_coupon', null)
   );
 
-  // Dark Mode
+  // Theme
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('elevate_theme');
+    const saved = localStorage.getItem('dreamit_theme') || localStorage.getItem('elevate_theme');
     if (saved !== null) return saved === 'dark';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
@@ -129,38 +191,45 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
-  // Sync to localStorage
+  // Persistence Syncs
   useEffect(() => {
-    setStorageItem('elevate_products', products);
+    setStorageItem('dreamit_users', users);
+  }, [users]);
+
+  useEffect(() => {
+    setStorageItem('dreamit_user', currentUser);
+  }, [currentUser]);
+
+  useEffect(() => {
+    setStorageItem('dreamit_products', products);
   }, [products]);
 
   useEffect(() => {
-    setStorageItem('elevate_cart', cart);
+    setStorageItem('dreamit_cart', cart);
   }, [cart]);
 
   useEffect(() => {
-    setStorageItem('elevate_wishlist', wishlist);
+    setStorageItem('dreamit_wishlist', wishlist);
   }, [wishlist]);
 
   useEffect(() => {
-    setStorageItem('elevate_orders', orders);
+    setStorageItem('dreamit_orders', orders);
   }, [orders]);
 
   useEffect(() => {
-    setStorageItem('elevate_reviews', reviews);
+    setStorageItem('dreamit_reviews', reviews);
   }, [reviews]);
 
   useEffect(() => {
-    setStorageItem('elevate_currency', currency);
+    setStorageItem('dreamit_currency', currency);
   }, [currency]);
 
   useEffect(() => {
-    setStorageItem('elevate_coupon', appliedCoupon);
+    setStorageItem('dreamit_coupon', appliedCoupon);
   }, [appliedCoupon]);
 
-  // Sync dark mode class on <html>
   useEffect(() => {
-    localStorage.setItem('elevate_theme', isDarkMode ? 'dark' : 'light');
+    localStorage.setItem('dreamit_theme', isDarkMode ? 'dark' : 'light');
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -174,10 +243,78 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setNotification({ message, type });
     setTimeout(() => {
       setNotification((curr) => (curr?.message === message ? null : curr));
-    }, 3200);
+    }, 3500);
   };
 
-  // Currency conversions
+  // Auth Operations
+  const openAuthModal = (role: UserRole = 'customer') => {
+    setAuthModalRole(role);
+    setIsAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => {
+    setIsAuthModalOpen(false);
+  };
+
+  const login = (email: string, role?: UserRole) => {
+    const targetEmail = email.trim().toLowerCase();
+    let user = users.find((u) => u.email.toLowerCase() === targetEmail);
+
+    if (!user) {
+      // Auto-assign based on domain or requested role
+      const isDomainAdmin = targetEmail.includes('admin') || role === 'admin';
+      user = {
+        id: `usr-${Date.now()}`,
+        name: isDomainAdmin ? 'Administrator' : targetEmail.split('@')[0],
+        email: targetEmail,
+        role: isDomainAdmin ? 'admin' : 'customer',
+        joinedDate: new Date().toISOString().split('T')[0],
+      };
+      setUsers((prev) => [...prev, user!]);
+    }
+
+    if (role && user.role !== role) {
+      user = { ...user, role };
+      setUsers((prev) => prev.map((u) => (u.id === user!.id ? user! : u)));
+    }
+
+    setCurrentUser(user);
+    closeAuthModal();
+    showNotification(`Welcome back, ${user.name}! (${user.role.toUpperCase()})`);
+    return { success: true, message: 'Logged in successfully!' };
+  };
+
+  const register = (name: string, email: string, role: UserRole) => {
+    const targetEmail = email.trim().toLowerCase();
+    const existing = users.find((u) => u.email.toLowerCase() === targetEmail);
+    if (existing) {
+      return { success: false, message: 'An account with this email already exists. Please log in.' };
+    }
+
+    const newUser: User = {
+      id: `usr-${Date.now()}`,
+      name: name.trim() || 'DreamIT Member',
+      email: targetEmail,
+      role,
+      joinedDate: new Date().toISOString().split('T')[0],
+    };
+
+    setUsers((prev) => [...prev, newUser]);
+    setCurrentUser(newUser);
+    closeAuthModal();
+    showNotification(`Account created! Logged in as ${newUser.name}.`);
+    return { success: true, message: 'Registration successful!' };
+  };
+
+  const logout = () => {
+    setCurrentUser(null);
+    if (activeTab === 'admin') {
+      setActiveTab('shop');
+    }
+    showNotification('You have logged out.', 'info');
+  };
+
+  // Currency
   const convertPrice = (usdAmount: number): number => {
     const rate = CURRENCIES[currency]?.rate || 1;
     return Math.round(usdAmount * rate * 100) / 100;
@@ -236,7 +373,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ];
     });
 
-    showNotification(`Added "${product.title}" to cart!`);
+    showNotification(`Added "${product.title}" to bag!`);
   };
 
   const updateCartQuantity = (cartItemId: string, quantity: number) => {
@@ -257,7 +394,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const removeFromCart = (cartItemId: string) => {
     setCart((prev) => prev.filter((item) => item.id !== cartItemId));
-    showNotification('Item removed from cart', 'info');
+    showNotification('Item removed from bag', 'info');
   };
 
   const clearCart = () => {
@@ -286,7 +423,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const trimmed = code.trim().toUpperCase();
     const found = AVAILABLE_COUPONS.find((c) => c.code === trimmed);
     if (!found) {
-      return { success: false, message: 'Invalid coupon code. Try ELEVATE20 or WELCOME10' };
+      return { success: false, message: 'Invalid coupon. Try ELEVATE20 or WELCOME10' };
     }
     if (cartSubtotal < found.minSubtotal) {
       return {
@@ -303,9 +440,9 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     showNotification('Coupon removed', 'info');
   };
 
-  // Orders
+  // Orders & Lifecycle (Cancel & Return)
   const createOrder = (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'trackingNumber'>): Order => {
-    const orderNumber = `ELV-${Math.floor(100000 + Math.random() * 900000)}`;
+    const orderNumber = `DMT-${Math.floor(100000 + Math.random() * 900000)}`;
     const trackingNumber = `TRK-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
     const newOrder: Order = {
       ...orderData,
@@ -332,12 +469,117 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return newOrder;
   };
 
+  const cancelOrder = (orderId: string, reason = 'Customer requested cancellation') => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return { success: false, message: 'Order not found.' };
+
+    if (order.status !== 'Confirmed' && order.status !== 'Processing') {
+      return {
+        success: false,
+        message: `Order cannot be cancelled because it is already ${order.status.toLowerCase()}.`,
+      };
+    }
+
+    // Re-stock product items!
+    setProducts((prev) =>
+      prev.map((prod) => {
+        const item = order.items.find((it) => it.product.id === prod.id);
+        if (item) {
+          return { ...prod, stock: prod.stock + item.quantity };
+        }
+        return prod;
+      })
+    );
+
+    // Update order status
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              status: 'Cancelled',
+              cancellationReason: reason,
+              cancelledAt: new Date().toISOString(),
+            }
+          : o
+      )
+    );
+
+    showNotification(`Order ${order.orderNumber} has been cancelled and items restocked!`, 'info');
+    return { success: true, message: 'Order successfully cancelled.' };
+  };
+
+  const requestReturn = (orderId: string, reason = 'Dissatisfied with item condition or fit') => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return { success: false, message: 'Order not found.' };
+
+    if (order.status !== 'Delivered') {
+      return {
+        success: false,
+        message: 'Returns can only be requested for Delivered orders.',
+      };
+    }
+
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              status: 'Return Requested',
+              returnReason: reason,
+              returnRequestedAt: new Date().toISOString(),
+            }
+          : o
+      )
+    );
+
+    showNotification(`Return request for Order ${order.orderNumber} submitted to DreamIT Support!`, 'success');
+    return { success: true, message: 'Return request submitted.' };
+  };
+
+  const approveReturn = (orderId: string) => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return;
+
+    // Restock items upon return approval
+    setProducts((prev) =>
+      prev.map((prod) => {
+        const item = order.items.find((it) => it.product.id === prod.id);
+        if (item) {
+          return { ...prod, stock: prod.stock + item.quantity };
+        }
+        return prod;
+      })
+    );
+
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              status: 'Returned',
+              returnApprovedAt: new Date().toISOString(),
+            }
+          : o
+      )
+    );
+
+    showNotification(`Return approved for Order ${order.orderNumber}. Inventory restocked.`, 'success');
+  };
+
+  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status } : o))
+    );
+    showNotification(`Order status updated to "${status}"`, 'info');
+  };
+
   // Reviews
   const addReview = (productId: string, userName: string, rating: number, comment: string) => {
     const newReview: Review = {
       id: `rev-${Date.now()}`,
       productId,
-      userName: userName.trim() || 'Anonymous Shopper',
+      userName: userName.trim() || currentUser?.name || 'DreamIT Shopper',
       rating,
       date: new Date().toISOString().split('T')[0],
       comment: comment.trim(),
@@ -349,7 +591,6 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       [productId]: [newReview, ...(prev[productId] || [])],
     }));
 
-    // Recalculate product rating & count
     setProducts((prev) =>
       prev.map((prod) => {
         if (prod.id === productId) {
@@ -366,10 +607,10 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       })
     );
 
-    showNotification('Your review was posted successfully!', 'success');
+    showNotification('Review posted successfully!', 'success');
   };
 
-  // Admin Product Operations
+  // Admin Catalog Operations
   const addProduct = (newProdData: Omit<Product, 'id' | 'rating' | 'reviewsCount'>) => {
     const product: Product = {
       ...newProdData,
@@ -378,7 +619,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       reviewsCount: 0,
     };
     setProducts((prev) => [product, ...prev]);
-    showNotification(`Product "${product.title}" created!`, 'success');
+    showNotification(`Product "${product.title}" added to DreamIT Mall!`, 'success');
   };
 
   const updateProduct = (updated: Product) => {
@@ -388,7 +629,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const deleteProduct = (productId: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== productId));
-    showNotification('Product deleted from store', 'info');
+    showNotification('Product removed from catalog', 'info');
   };
 
   const resetToDefaults = () => {
@@ -398,7 +639,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setWishlist([]);
     setOrders([]);
     setAppliedCoupon(null);
-    showNotification('Store catalog reset to default demo data', 'info');
+    showNotification('Store catalog reset to demo baseline', 'info');
   };
 
   const resetFilters = () => {
@@ -408,35 +649,50 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <ShopContext.Provider
       value={{
+        currentUser,
+        users,
+        login,
+        register,
+        logout,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
+        authModalRole,
+        setAuthModalRole,
+        openAuthModal,
+        closeAuthModal,
         products,
+        addProduct,
+        updateProduct,
+        deleteProduct,
+        resetToDefaults,
         cart,
-        wishlist,
-        orders,
-        reviews,
-        currency,
-        setCurrency,
-        formatPrice,
-        convertPrice,
-        appliedCoupon,
-        applyCoupon,
-        removeCoupon,
+        addToCart,
+        updateCartQuantity,
+        removeFromCart,
+        clearCart,
         cartSubtotal,
         cartDiscount,
         cartCount,
         freeShippingThreshold,
         freeShippingGap,
-        addToCart,
-        updateCartQuantity,
-        removeFromCart,
-        clearCart,
+        wishlist,
         toggleWishlist,
         isInWishlist,
+        appliedCoupon,
+        applyCoupon,
+        removeCoupon,
+        orders,
         createOrder,
+        cancelOrder,
+        requestReturn,
+        approveReturn,
+        updateOrderStatus,
+        reviews,
         addReview,
-        addProduct,
-        updateProduct,
-        deleteProduct,
-        resetToDefaults,
+        currency,
+        setCurrency,
+        formatPrice,
+        convertPrice,
         selectedProduct,
         setSelectedProduct,
         isCartOpen,
