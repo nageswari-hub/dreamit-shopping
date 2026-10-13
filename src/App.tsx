@@ -8,6 +8,7 @@ import { ProductModal } from './components/ProductModal';
 import { CartDrawer } from './components/CartDrawer';
 import { WishlistDrawer } from './components/WishlistDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
+import { OrdersView } from './components/OrdersView';
 import { Toast } from './components/Toast';
 
 const StoreContent: React.FC = () => {
@@ -28,8 +29,8 @@ const StoreContent: React.FC = () => {
       )}
 
       {activeTab === 'orders' && (
-        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
-          <div className="text-center py-12 text-slate-500">Orders View coming in Milestone 8</div>
+        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
+          <OrdersView />
         </main>
       )}
 
