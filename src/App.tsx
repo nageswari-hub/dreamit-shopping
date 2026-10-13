@@ -5,6 +5,8 @@ import { HeroBanner } from './components/HeroBanner';
 import { CategoryNav } from './components/CategoryNav';
 import { ProductGrid } from './components/ProductGrid';
 import { ProductModal } from './components/ProductModal';
+import { CartDrawer } from './components/CartDrawer';
+import { WishlistDrawer } from './components/WishlistDrawer';
 import { Toast } from './components/Toast';
 
 const StoreContent: React.FC = () => {
@@ -37,6 +39,8 @@ const StoreContent: React.FC = () => {
       )}
 
       <ProductModal />
+      <CartDrawer />
+      <WishlistDrawer />
       <Toast />
     </div>
   );
