@@ -64,6 +64,8 @@ export interface CartItem {
   selectedSize?: string;
 }
 
+export type OrderItem = CartItem;
+
 export interface Coupon {
   code: string;
   discountPercent: number;
@@ -122,6 +124,8 @@ export interface Order {
   id: string;
   orderNumber: string;
   createdAt: string;
+  userId?: string;
+  userName?: string;
   items: CartItem[];
   subtotal: number;
   discount: number;

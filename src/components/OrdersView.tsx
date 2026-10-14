@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
-import { Order } from '../types';
+import { Order, OrderItem } from '../types';
 import {
   Package,
   Truck,
@@ -16,12 +16,15 @@ import {
   AlertCircle,
   CornerDownLeft,
   Building,
-  CreditCard,
+  Lock,
 } from 'lucide-react';
 
 export const OrdersView: React.FC = () => {
   const {
+    userOrders,
     orders,
+    currentUser,
+    openAuthModal,
     formatPrice,
     addToCart,
     setActiveTab,
@@ -32,23 +35,17 @@ export const OrdersView: React.FC = () => {
 
   const [copiedTracking, setCopiedTracking] = useState<string | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(
-    orders[0]?.id || null
+    userOrders[0]?.id || null
   );
-  const [selectedInvoice, setSelectedInvoice] = useState<Order | null>(null);
-
-  // Cancellation modal state with Refund Bank Details
+  // Cancellation modal state (Zero details requested)
   const [cancellingOrder, setCancellingOrder] = useState<Order | null>(null);
-  const [cancelReason, setCancelReason] = useState('Found a better price elsewhere');
-  const [accountHolderName, setAccountHolderName] = useState('');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [ifscCode, setIfscCode] = useState('');
-  const [bankName, setBankName] = useState('');
-  const [upiId, setUpiId] = useState('');
-  const [cancelError, setCancelError] = useState<string | null>(null);
 
   // Return request modal state
   const [returningOrder, setReturningOrder] = useState<Order | null>(null);
   const [returnReason, setReturnReason] = useState('Item size does not fit as expected');
+
+  // Invoice modal state
+  const [selectedInvoice, setSelectedInvoice] = useState<Order | null>(null);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -66,31 +63,11 @@ export const OrdersView: React.FC = () => {
 
   const handleOpenCancelModal = (order: Order) => {
     setCancellingOrder(order);
-    setAccountHolderName(order.customer.fullName);
-    setAccountNumber('');
-    setIfscCode('');
-    setBankName('');
-    setUpiId('');
-    setCancelError(null);
   };
 
   const confirmCancel = () => {
     if (!cancellingOrder) return;
-    if (!accountNumber.trim()) {
-      setCancelError('Please enter your Bank Account Number for refund processing.');
-      return;
-    }
-    if (!ifscCode.trim()) {
-      setCancelError('Please enter the Bank IFSC Code.');
-      return;
-    }
-    cancelOrder(cancellingOrder.id, cancelReason, {
-      accountHolderName,
-      accountNumber,
-      ifscCode,
-      bankName,
-      upiId,
-    });
+    cancelOrder(cancellingOrder.id, 'Cancelled by Customer');
     setCancellingOrder(null);
   };
 
@@ -140,6 +117,32 @@ export const OrdersView: React.FC = () => {
     }
   };
 
+  if (!currentUser) {
+    return (
+      <div className="text-center py-20 px-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4 max-w-lg mx-auto my-12 animate-fade-in">
+        <div className="w-16 h-16 rounded-full bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 flex items-center justify-center mx-auto">
+          <Lock className="w-8 h-8" />
+        </div>
+        <div>
+          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
+            Sign In to View Your Orders
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+            Please sign in with your mobile number or username to access your personal order tracking, shipments, and return requests.
+          </p>
+        </div>
+        <div className="pt-2">
+          <button
+            onClick={() => openAuthModal('customer', 'login')}
+            className="px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+          >
+            Sign In to Your Account
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
       {/* Title */}
@@ -149,24 +152,40 @@ export const OrdersView: React.FC = () => {
             My Orders, Tracking & Returns
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Track your deliveries, cancel active shipments, request returns, and print official invoices.
+            Track your deliveries, cancel active shipments, request returns, and print official invoices for <strong>{currentUser.name}</strong>.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-300 text-xs font-bold">
-            {orders.length} {orders.length === 1 ? 'Order' : 'Orders'} Recorded
+            {userOrders.length} {userOrders.length === 1 ? 'Order' : 'Orders'} Recorded
           </span>
         </div>
       </div>
 
-      {orders.length > 0 ? (
+      {/* Administrator view notice if admin is viewing customer tab */}
+      {currentUser.role === 'admin' && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs">
+          <div className="text-emerald-800 dark:text-emerald-300">
+            <strong>Administrator Account:</strong> Showing your personal orders ({userOrders.length}). To inspect, process, or refund orders across the entire mall ({orders.length} total), use the Admin Portal.
+          </div>
+          <button
+            onClick={() => setActiveTab('admin')}
+            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold whitespace-nowrap cursor-pointer shadow-xs"
+          >
+            Go to Admin Portal
+          </button>
+        </div>
+      )}
+
+      {userOrders.length > 0 ? (
         <div className="space-y-6">
-          {orders.map((order) => {
+          {userOrders.map((order) => {
             const isExpanded = expandedOrderId === order.id;
             const currentStep = getStatusStep(order.status);
             const isCancelled = order.status === 'Cancelled';
+            const isReturned = order.status === 'Returned';
             const canCancel = order.status === 'Confirmed' || order.status === 'Processing';
-            const canReturn = order.status === 'Delivered';
+            const canReturn = order.status !== 'Cancelled' && order.status !== 'Returned';
 
             return (
               <div
@@ -209,7 +228,7 @@ export const OrdersView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusBadge(
                         order.status
@@ -217,6 +236,15 @@ export const OrdersView: React.FC = () => {
                     >
                       {order.status}
                     </span>
+
+                    {/* Show Refund Issued ONLY on Return */}
+                    {(order.status === 'Returned' || order.refundDetails?.refundStatus === 'Refund Issued') && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold text-xs border border-emerald-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Refund Issued</span>
+                      </span>
+                    )}
+
                     <button
                       className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                       aria-label="Toggle details"
@@ -230,8 +258,39 @@ export const OrdersView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Timeline Progress Bar (if not cancelled) */}
-                {!isCancelled ? (
+                {/* Return status notification banner */}
+                {order.status === 'Returned' && (
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-200 dark:border-emerald-900 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-200">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                      <div>
+                        <strong>Return Accepted &amp; Refund Issued:</strong> Transaction reference <span className="font-mono font-bold">{order.refundDetails?.refundTransactionId || 'RFND-SETTLED'}</span>.
+                        {order.returnReason && <span className="block text-[11px] text-emerald-600 dark:text-emerald-400">Reason: &quot;{order.returnReason}&quot;</span>}
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100 font-bold text-[10px]">
+                      Refund Settled
+                    </span>
+                  </div>
+                )}
+
+                {/* Cancelled notice banner (Never shows refund issued!) */}
+                {isCancelled && (
+                  <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-900 flex items-center justify-between text-xs text-rose-800 dark:text-rose-200">
+                    <div className="flex items-center gap-2">
+                      <XCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                      <div>
+                        <strong>Order Cancelled:</strong> Since this order was Cash on Delivery, no payment was charged. Inventory was restocked.
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-900 text-rose-800 dark:text-rose-100 font-bold text-[10px]">
+                      No Charge
+                    </span>
+                  </div>
+                )}
+
+                {/* Timeline Progress Bar (only if active) */}
+                {!isCancelled && !isReturned ? (
                   <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                     <div className="max-w-2xl mx-auto">
                       <div className="relative flex items-center justify-between">
@@ -392,7 +451,7 @@ export const OrdersView: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <Building className="w-4 h-4 text-brand-600" />
                             <span className="font-extrabold text-slate-900 dark:text-white">
-                              Refund Details ({order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment'})
+                              Refund Details (Cash on Delivery)
                             </span>
                           </div>
                           <span
@@ -493,12 +552,10 @@ export const OrdersView: React.FC = () => {
                           <span>Taxes</span>
                           <span>{formatPrice(order.tax)}</span>
                         </div>
-                        {order.razorpayPaymentId && (
-                          <div className="flex justify-between text-brand-600 dark:text-brand-400 font-semibold">
-                            <span>Razorpay ID</span>
-                            <span className="font-mono text-[11px]">{order.razorpayPaymentId}</span>
-                          </div>
-                        )}
+                        <div className="flex justify-between text-amber-700 dark:text-amber-400 font-semibold text-xs">
+                          <span>Payment Mode</span>
+                          <span>Cash on Delivery (COD)</span>
+                        </div>
                         <div className="flex justify-between font-extrabold text-sm pt-1 border-t border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
                           <span>Total</span>
                           <span className="text-brand-600 dark:text-brand-400">
@@ -521,14 +578,14 @@ export const OrdersView: React.FC = () => {
                         </button>
                       )}
 
-                      {/* Request Return Action */}
+                      {/* Return Order Action */}
                       {canReturn && (
                         <button
                           onClick={() => setReturningOrder(order)}
                           className="px-4 py-2 rounded-xl border border-purple-300 dark:border-purple-900 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/60 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
                           <CornerDownLeft className="w-3.5 h-3.5" />
-                          <span>Request Return</span>
+                          <span>Return Order</span>
                         </button>
                       )}
 
@@ -560,10 +617,10 @@ export const OrdersView: React.FC = () => {
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              No orders placed yet
+              No orders placed yet for {currentUser.name}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-              When you purchase items from DreamIT Mall, your real-time tracking timeline, cancellation, and return options will appear here.
+              You haven't placed any orders with this account ({currentUser.phone || currentUser.email}) yet. When you order items from DreamIT Mall, your personal order history and delivery tracking will appear here.
             </p>
           </div>
           <button
@@ -575,154 +632,48 @@ export const OrdersView: React.FC = () => {
         </div>
       )}
 
-      {/* Cancel Order Dialog Modal with Bank Details */}
+      {/* Cancel Order Dialog Modal - Clean 1-Click Zero Details */}
       {cancellingOrder && (
         <div
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
         >
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
-              <AlertCircle className="w-6 h-6" />
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto shadow-inner">
+              <AlertCircle className="w-7 h-7" />
             </div>
 
-            <div className="text-center space-y-1">
-              <h3 className="text-lg font-black text-slate-900 dark:text-white">
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white">
                 Cancel Order {cancellingOrder.orderNumber}?
               </h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Please provide your Bank Account details for receiving the refund of{' '}
-                <strong className="text-slate-900 dark:text-white font-black">{formatPrice(cancellingOrder.total)}</strong>.
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Are you sure you want to cancel this order? Since this order was placed with <strong>Cash on Delivery</strong>, no payment was deducted.
               </p>
             </div>
 
-            {/* Notice based on payment method */}
-            {cancellingOrder.paymentMethod === 'cod' ? (
-              <div className="p-3.5 rounded-2xl bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-900 text-xs text-purple-900 dark:text-purple-200 flex items-start gap-2.5">
-                <Truck className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block font-bold">Cash on Delivery Refund Policy:</strong>
-                  For Cash on Delivery orders, refund will be issued to your bank account only after the parcel is returned to our warehouse.
-                </div>
-              </div>
-            ) : (
-              <div className="p-3.5 rounded-2xl bg-brand-50 dark:bg-brand-950/50 border border-brand-200 dark:border-brand-900 text-xs text-brand-900 dark:text-brand-200 flex items-start gap-2.5">
-                <CreditCard className="w-4 h-4 text-brand-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block font-bold">Online Payment Refund Policy:</strong>
-                  Your refund will be marked and issued to this bank account once the DreamIT Administrator accepts the cancellation.
-                </div>
-              </div>
-            )}
-
-            {cancelError && (
-              <p className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 text-xs font-semibold">
-                {cancelError}
-              </p>
-            )}
-
-            {/* Bank Account Details Inputs */}
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                  Account Holder Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={accountHolderName}
-                  onChange={(e) => setAccountHolderName(e.target.value)}
-                  placeholder="Name as registered in bank"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Bank Account Number *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value.replace(/\s/g, ''))}
-                    placeholder="e.g. 501002348192"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Bank IFSC Code *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={ifscCode}
-                    onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
-                    placeholder="e.g. HDFC0001234"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono uppercase focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Bank Name (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    placeholder="e.g. State Bank of India"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    UPI ID (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={upiId}
-                    onChange={(e) => setUpiId(e.target.value)}
-                    placeholder="e.g. name@okhdfcbank"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                  Reason for cancellation:
-                </label>
-                <select
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                >
-                  <option value="Found a better price elsewhere">Found a better price elsewhere</option>
-                  <option value="Changed my mind / Ordered by mistake">Changed my mind / Ordered by mistake</option>
-                  <option value="Shipping takes too long">Shipping takes too long</option>
-                  <option value="Need to change shipping address">Need to change shipping address</option>
-                </select>
-              </div>
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-between">
+              <span className="font-medium">Order Total:</span>
+              <span className="font-extrabold text-slate-900 dark:text-white text-sm">
+                {formatPrice(cancellingOrder.total)}
+              </span>
             </div>
 
             <div className="flex gap-3 pt-2">
               <button
+                type="button"
                 onClick={() => setCancellingOrder(null)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 Keep Order
               </button>
               <button
+                type="button"
                 onClick={confirmCancel}
-                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md cursor-pointer"
+                className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-all cursor-pointer"
               >
-                Confirm & Submit Refund Details
+                Yes, Cancel Order
               </button>
             </div>
           </div>
@@ -742,10 +693,12 @@ export const OrdersView: React.FC = () => {
             </div>
             <div className="text-center space-y-1">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                Request Return for {returningOrder.orderNumber}
+                Return Order {returningOrder.orderNumber}?
               </h3>
               <p className="text-xs text-slate-500">
-                DreamIT Mall offers a 30-day hassle-free return guarantee on delivered items.
+                Confirm return for this order. Refund of{' '}
+                <strong className="text-slate-900 dark:text-white font-bold">{formatPrice(returningOrder.total)}</strong>{' '}
+                will be issued immediately upon confirmation.
               </p>
             </div>
 
@@ -762,21 +715,24 @@ export const OrdersView: React.FC = () => {
                 <option value="Item received defective or damaged">Item received defective or damaged</option>
                 <option value="Product does not match website description">Product does not match website description</option>
                 <option value="Arrived later than expected">Arrived later than expected</option>
+                <option value="Changed mind / No longer needed">Changed mind / No longer needed</option>
               </select>
             </div>
 
             <div className="flex gap-3 pt-2">
               <button
+                type="button"
                 onClick={() => setReturningOrder(null)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={confirmReturn}
-                className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/20 transition-all cursor-pointer"
               >
-                Submit Return Request
+                Confirm &amp; Issue Refund
               </button>
             </div>
           </div>
@@ -829,11 +785,9 @@ export const OrdersView: React.FC = () => {
                 <p className="text-slate-600">
                   Status: <strong>{selectedInvoice.status}</strong>
                 </p>
-                {selectedInvoice.razorpayPaymentId && (
-                  <p className="text-slate-600 font-mono text-[10px]">
-                    Razorpay ID: {selectedInvoice.razorpayPaymentId}
-                  </p>
-                )}
+                <p className="text-slate-600">
+                  Payment: <strong>Cash on Delivery (COD)</strong>
+                </p>
               </div>
             </div>
 
@@ -847,7 +801,7 @@ export const OrdersView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {selectedInvoice.items.map((it) => (
+                {selectedInvoice.items.map((it: OrderItem) => (
                   <tr key={it.id}>
                     <td className="py-2.5">
                       <span className="font-bold text-slate-900">{it.product.title}</span>

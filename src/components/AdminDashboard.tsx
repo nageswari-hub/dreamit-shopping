@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
 import { Product, RefundStatus } from '../types';
-import { AUTHORIZED_ADMIN_EMAIL } from '../data/mockProducts';
+import { AUTHORIZED_ADMIN_EMAIL, CURRENCIES } from '../data/mockProducts';
 import {
   TrendingUp,
   ShoppingBag,
@@ -10,9 +10,9 @@ import {
   Trash2,
   Edit3,
   RotateCcw,
-  DollarSign,
   Layers,
   X,
+  XCircle,
   ShieldAlert,
   ShieldCheck,
   Lock,
@@ -22,11 +22,16 @@ import {
   Building,
   CheckCircle2,
   Clock,
+  Smartphone,
+  MessageSquare,
+  ExternalLink,
+  Banknote,
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
   const {
     currentUser,
+    currency,
     login,
     openAuthModal,
     setActiveTab,
@@ -38,15 +43,23 @@ export const AdminDashboard: React.FC = () => {
     deleteProduct,
     resetToDefaults,
     approveReturn,
-    approveRefund,
-    confirmParcelReturnedAndRefund,
     updateOrderStatus,
     cancelOrder,
+    smsApiKey,
+    setSmsApiKey,
+    sendOtp,
   } = useShop();
+
+  const currencyConfig = CURRENCIES[currency] || CURRENCIES.USD;
+  const currencySymbol = currencyConfig.symbol;
+  const currencyRate = currencyConfig.rate;
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [activeAdminTab, setActiveAdminTab] = useState<'inventory' | 'orders'>('inventory');
+  const [activeAdminTab, setActiveAdminTab] = useState<'inventory' | 'orders' | 'settings'>('inventory');
+  const [tempSmsKey, setTempSmsKey] = useState(smsApiKey);
+  const [testPhone, setTestPhone] = useState('7013304012');
+  const [testSmsStatus, setTestSmsStatus] = useState<string | null>(null);
 
   // Form states for New / Edit Product
   const [formData, setFormData] = useState({
@@ -161,8 +174,8 @@ export const AdminDashboard: React.FC = () => {
       description: p.description,
       brand: p.brand,
       category: p.category,
-      price: p.price,
-      originalPrice: p.originalPrice || p.price,
+      price: Number((p.price * currencyRate).toFixed(2)),
+      originalPrice: Number(((p.originalPrice || p.price) * currencyRate).toFixed(2)),
       stock: p.stock,
       imageUrl: p.images[0] || '',
       tags: p.tags.join(', '),
@@ -174,6 +187,10 @@ export const AdminDashboard: React.FC = () => {
     e.preventDefault();
     if (!formData.title.trim()) return;
 
+    // Convert input price back to base USD storage
+    const basePrice = Number((Number(formData.price) / currencyRate).toFixed(2));
+    const baseOriginalPrice = Number((Number(formData.originalPrice) / currencyRate).toFixed(2));
+
     if (editingProduct) {
       updateProduct({
         ...editingProduct,
@@ -181,8 +198,8 @@ export const AdminDashboard: React.FC = () => {
         description: formData.description.trim(),
         brand: formData.brand.trim() || 'DreamIT Studio',
         category: formData.category,
-        price: Number(formData.price),
-        originalPrice: Number(formData.originalPrice),
+        price: basePrice,
+        originalPrice: baseOriginalPrice,
         stock: Number(formData.stock),
         images: [formData.imageUrl.trim() || editingProduct.images[0]],
         tags: formData.tags.split(',').map((t) => t.trim()).filter(Boolean),
@@ -193,10 +210,10 @@ export const AdminDashboard: React.FC = () => {
         description: formData.description.trim() || 'Curated item.',
         brand: formData.brand.trim() || 'DreamIT Studio',
         category: formData.category,
-        price: Number(formData.price),
-        originalPrice: Number(formData.originalPrice),
+        price: basePrice,
+        originalPrice: baseOriginalPrice,
         stock: Number(formData.stock),
-        images: [formData.imageUrl.trim()],
+        images: [formData.imageUrl.trim() || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80'],
         tags: formData.tags.split(',').map((t) => t.trim()).filter(Boolean),
         isNew: true,
       });
@@ -230,7 +247,15 @@ export const AdminDashboard: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={resetToDefaults}
+            onClick={() => {
+              if (
+                window.confirm(
+                  '⚠️ WARNING: Are you sure you want to reset the store catalog to default demo products?\n\nThis will remove all custom products you added. Click "Cancel" to keep your products, or "OK" only if you really want to reset.'
+                )
+              ) {
+                resetToDefaults();
+              }
+            }}
             className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -252,8 +277,8 @@ export const AdminDashboard: React.FC = () => {
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-bold uppercase tracking-wider">Gross Sales</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <DollarSign className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-sm">
+              {currencySymbol}
             </div>
           </div>
           <span className="text-2xl font-black text-slate-900 dark:text-white block">
@@ -350,6 +375,18 @@ export const AdminDashboard: React.FC = () => {
             </span>
           )}
         </button>
+
+        <button
+          onClick={() => setActiveAdminTab('settings')}
+          className={`text-sm font-bold pb-2 -mb-2 transition-colors flex items-center gap-2 cursor-pointer ${
+            activeAdminTab === 'settings'
+              ? 'text-brand-600 border-b-2 border-brand-600'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <Smartphone className="w-4 h-4" />
+          <span>Real SMS & Gateways</span>
+        </button>
       </div>
 
       {/* TAB 1: Inventory Table Section */}
@@ -377,7 +414,6 @@ export const AdminDashboard: React.FC = () => {
                   <th className="py-3 px-4">Category</th>
                   <th className="py-3 px-4">Price</th>
                   <th className="py-3 px-4">Stock Level</th>
-                  <th className="py-3 px-4">Rating</th>
                   <th className="py-3 px-5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -434,12 +470,6 @@ export const AdminDashboard: React.FC = () => {
                           +
                         </button>
                       </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="font-bold text-slate-900 dark:text-white">
-                        ★ {prod.rating}
-                      </span>
-                      <span className="text-slate-500 text-[11px]"> ({prod.reviewsCount})</span>
                     </td>
                     <td className="py-3.5 px-5 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -547,14 +577,26 @@ export const AdminDashboard: React.FC = () => {
                               </div>
                             )}
                           </div>
-                        ) : (ord.status === 'Cancelled' || ord.status === 'Cancellation Requested') ? (
+                        ) : ord.status === 'Cancelled' ? (
+                          <div className="mt-2.5 p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-[11px] space-y-0.5 text-rose-800 dark:text-rose-300">
+                            <div className="font-bold flex items-center gap-1 text-rose-700 dark:text-rose-400">
+                              <XCircle className="w-3.5 h-3.5" />
+                              <span>Order Cancelled</span>
+                            </div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                              Reason: {ord.cancellationReason || 'Cancelled by Customer'}
+                            </div>
+                            {ord.cancelledAt && (
+                              <div className="text-[9px] text-slate-400 font-mono">
+                                Time: {new Date(ord.cancelledAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                              </div>
+                            )}
+                          </div>
+                        ) : ord.status === 'Cancellation Requested' ? (
                           <div className="mt-2.5 p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-[11px] space-y-1 text-amber-800 dark:text-amber-300">
                             <div className="flex items-center gap-1 font-bold">
                               <Building className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                              <span>Refund Destination:</span>
-                            </div>
-                            <div className="text-[10px]">
-                              Original Payment Source ({ord.paymentMethod === 'cod' ? 'COD Cash' : ord.paymentMethod.toUpperCase()})
+                              <span>Cancellation Pending</span>
                             </div>
                           </div>
                         ) : null}
@@ -581,8 +623,13 @@ export const AdminDashboard: React.FC = () => {
                             {ord.status}
                           </span>
 
-                          {/* Refund Status Pill */}
-                          {(ord.status === 'Cancelled' || ord.status === 'Cancellation Requested' || ord.refundDetails) && (
+                          {/* Cancellation / Refund Status Pill */}
+                          {ord.status === 'Cancelled' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
+                              <XCircle className="w-3 h-3 text-rose-600" />
+                              <span>COD • No Charge</span>
+                            </span>
+                          ) : (ord.status === 'Cancellation Requested' || ord.refundDetails) ? (
                             <div>
                               {(() => {
                                 const currentRefundStatus: RefundStatus =
@@ -607,7 +654,7 @@ export const AdminDashboard: React.FC = () => {
                                 );
                               })()}
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       </td>
                       <td className="py-3.5 px-5 text-right">
@@ -623,31 +670,28 @@ export const AdminDashboard: React.FC = () => {
                                 Txn: {ord.refundDetails.refundTransactionId || 'RFND-SETTLED'}
                               </div>
                             </div>
-                          ) : (ord.status === 'Cancelled' || ord.status === 'Cancellation Requested') ? (
-                            /* 2. Order is Cancelled or Cancellation Requested (Refund pending) */
-                            ord.paymentMethod === 'cod' ? (
-                              /* Cash on Delivery: Only when warehouse marks parcel returned is refund issued */
-                              <button
-                                onClick={() => confirmParcelReturnedAndRefund(ord.id)}
-                                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[11px] flex items-center gap-1.5 cursor-pointer shadow-md shadow-blue-500/20 transition-all"
-                                title="Confirm parcel has physically returned to warehouse to issue refund"
-                              >
-                                <Truck className="w-3.5 h-3.5" />
-                                <span>Confirm Parcel Return & Issue Refund</span>
-                              </button>
-                            ) : (
-                              /* Online Payment (UPI, Card, Razorpay): Admin accepts cancellation & issues refund */
-                              <button
-                                onClick={() => approveRefund(ord.id)}
-                                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-500/20 transition-all"
-                                title="Accept cancellation and issue refund to customer bank account"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>Accept & Issue Refund</span>
-                              </button>
-                            )
+                          ) : ord.status === 'Cancelled' ? (
+                            /* 2. Order Cancelled (Items returned to inventory, 0 payment deducted) */
+                            <div className="text-right">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 font-extrabold text-[11px] border border-rose-200 dark:border-rose-900">
+                                <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                                <span>Cancelled by Customer</span>
+                              </span>
+                              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
+                                ✓ Stock Restocked
+                              </div>
+                            </div>
+                          ) : ord.status === 'Cancellation Requested' ? (
+                            /* 3. Pending cancellation approval if any */
+                            <button
+                              onClick={() => cancelOrder(ord.id, 'Cancellation Approved by Admin')}
+                              className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-[11px] flex items-center gap-1.5 cursor-pointer shadow-md shadow-rose-500/20 transition-all"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              <span>Confirm Cancellation</span>
+                            </button>
                           ) : ord.status === 'Return Requested' ? (
-                            /* 3. Post-Delivery Return Requested */
+                            /* 4. Post-Delivery Return Requested */
                             <button
                               onClick={() => approveReturn(ord.id)}
                               className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer"
@@ -706,6 +750,156 @@ export const AdminDashboard: React.FC = () => {
               No orders have been placed in the store yet.
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB 3: Real SMS & Gateway Settings */}
+      {activeAdminTab === 'settings' && (
+        <div className="space-y-6">
+          {/* SMS Gateway Card */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 sm:p-7 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                    Real Telecom Cellular SMS Gateway (India +91)
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Dispatch live SMS OTPs to customer mobile numbers (such as 7013304012) via Fast2SMS.
+                  </p>
+                </div>
+              </div>
+
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                  smsApiKey
+                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300'
+                    : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${smsApiKey ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                <span>{smsApiKey ? 'Live SMS Active' : 'Standby / Simulated Mode'}</span>
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3 text-xs">
+              <div className="flex items-start gap-2.5 text-slate-700 dark:text-slate-300">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong>How Real SMS Works in Web Applications:</strong> Web browsers running on laptops or mobile phones cannot send physical telecom cellular SMS without an SMS Gateway API. Fast2SMS connects your app to Indian telecom towers (Jio, Airtel, Vi) to deliver real SMS messages directly to customer phones.
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400 font-semibold">
+                <ExternalLink className="w-3.5 h-3.5" />
+                <a
+                  href="https://www.fast2sms.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline"
+                >
+                  Get Free Fast2SMS API Key (Fast2SMS provides instant free credits upon signup) &rarr;
+                </a>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="font-bold text-slate-700 dark:text-slate-300 block text-xs">
+                Fast2SMS API Key (Authorization Key)
+              </label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="password"
+                  value={tempSmsKey}
+                  onChange={(e) => setTempSmsKey(e.target.value)}
+                  placeholder="Paste Fast2SMS API Key from fast2sms.com/dashboard/dev-api"
+                  className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSmsApiKey(tempSmsKey.trim());
+                    setTestSmsStatus('Fast2SMS Gateway Key saved successfully!');
+                    setTimeout(() => setTestSmsStatus(null), 3500);
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-xs cursor-pointer"
+                >
+                  Save SMS Key
+                </button>
+              </div>
+              {testSmsStatus && (
+                <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5 animate-fade-in">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{testSmsStatus}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Test SMS dispatch */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+              <span className="font-bold text-slate-700 dark:text-slate-300 block text-xs">
+                Send Test Verification SMS to Real Phone Number
+              </span>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="tel"
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                  placeholder="10-digit mobile number"
+                  className="w-full sm:w-60 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const res = sendOtp(testPhone);
+                    setTestSmsStatus(res.message);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>Send Test SMS to Phone</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Cash on Delivery Exclusive Gateway Card */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 sm:p-7 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <Banknote className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                    Storewide Payment Method: Cash on Delivery (COD) Only
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    All customer checkouts are exclusively Cash on Delivery. Online payment gateways (Razorpay, Cards, NetBanking) are disabled.
+                  </p>
+                </div>
+              </div>
+
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span>COD Active Storewide</span>
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+              <div className="flex items-start gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <span><strong>No Online Gateways Required:</strong> Customers place orders without entering debit/credit cards or online payment passwords. Courier collects cash or contactless UPI on delivery.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Truck className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
+                <span><strong>Parcel Return Policy:</strong> When Cash on Delivery orders are cancelled or returned, refunds are only issued after the parcel physically arrives back at your warehouse.</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -780,28 +974,30 @@ export const AdminDashboard: React.FC = () => {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Price ($) *
+                    Price ({currencySymbol}) *
                   </label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="any"
                     required
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                    placeholder={`e.g. ${(199.99 * currencyRate).toFixed(0)}`}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none"
                   />
                 </div>
                 <div>
                   <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Compare Price ($)
+                    Compare Price ({currencySymbol})
                   </label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="any"
                     value={formData.originalPrice}
                     onChange={(e) =>
                       setFormData({ ...formData, originalPrice: Number(e.target.value) })
                     }
+                    placeholder={`e.g. ${(249.99 * currencyRate).toFixed(0)}`}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none"
                   />
                 </div>

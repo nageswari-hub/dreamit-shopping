@@ -206,7 +206,6 @@ export const ProductGrid: React.FC = () => {
             <option value="discount">🔥 Discount Deals First</option>
             <option value="price-low">Price: Low to High</option>
             <option value="price-high">Price: High to Low</option>
-            <option value="rating">Highest Rated</option>
           </select>
         </div>
       </div>

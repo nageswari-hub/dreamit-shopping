@@ -1,6 +1,6 @@
 import React from 'react';
 import { useShop } from '../context/ShopContext';
-import { RotateCcw, Filter, Star, Check } from 'lucide-react';
+import { RotateCcw, Filter } from 'lucide-react';
 
 export const FilterSidebar: React.FC = () => {
   const { filters, setFilters, resetFilters, formatPrice, products } = useShop();
@@ -8,7 +8,6 @@ export const FilterSidebar: React.FC = () => {
   const activeFiltersCount =
     (filters.category !== 'All' ? 1 : 0) +
     (filters.maxPrice < 500 ? 1 : 0) +
-    (filters.minRating > 0 ? 1 : 0) +
     (filters.inStockOnly ? 1 : 0) +
     (filters.search ? 1 : 0);
 
@@ -99,43 +98,6 @@ export const FilterSidebar: React.FC = () => {
         <div className="flex justify-between text-[11px] text-slate-600 dark:text-slate-400 font-medium">
           <span>{formatPrice(20)}</span>
           <span>{formatPrice(500)}</span>
-        </div>
-      </div>
-
-      {/* Customer Rating Filter */}
-      <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider block">
-          Minimum Rating
-        </span>
-        <div className="space-y-1">
-          {[
-            { value: 0, label: 'Any Rating' },
-            { value: 4.5, label: '4.5 Stars & above' },
-            { value: 4.0, label: '4.0 Stars & above' },
-            { value: 3.5, label: '3.5 Stars & above' },
-          ].map((item) => (
-            <button
-              key={item.value}
-              onClick={() => setFilters((prev) => ({ ...prev, minRating: item.value }))}
-              className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
-                filters.minRating === item.value
-                  ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 font-bold'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-              }`}
-            >
-              <div className="flex items-center gap-1.5">
-                {item.value > 0 ? (
-                  <>
-                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                    <span>{item.label}</span>
-                  </>
-                ) : (
-                  <span>{item.label}</span>
-                )}
-              </div>
-              {filters.minRating === item.value && <Check className="w-3.5 h-3.5 text-brand-600" />}
-            </button>
-          ))}
         </div>
       </div>
 

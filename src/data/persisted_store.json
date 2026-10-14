@@ -1,0 +1,736 @@
+{
+  "products": [
+    {
+      "title": "lehangas",
+      "description": "lehanga choli semi stiched",
+      "brand": "avasa",
+      "category": "Fashion",
+      "price": 99.99,
+      "originalPrice": 129.99,
+      "stock": 25,
+      "images": [
+        "https://i.pinimg.com/736x/16/c9/e6/16c9e6ab20ffb551eb4c5040ad17cc0f.jpg"
+      ],
+      "tags": [
+        "tech",
+        "premium"
+      ],
+      "isNew": true,
+      "id": "prod-1791912789433",
+      "rating": 5,
+      "reviewsCount": 0
+    },
+    {
+      "id": "prod-1",
+      "title": "Aura Studio Wireless Noise-Cancelling Headphones",
+      "description": "Immerse yourself in acoustic perfection with spatial audio, adaptive 45dB noise cancellation, and up to 40 hours of playtime on a single charge.",
+      "price": 249.99,
+      "originalPrice": 299.99,
+      "category": "Electronics",
+      "brand": "Acoustix Labs",
+      "rating": 4.9,
+      "reviewsCount": 148,
+      "stock": 25,
+      "featured": true,
+      "isNew": true,
+      "images": [
+        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1484704849700-f032a568e944?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=800&q=80"
+      ],
+      "colors": [
+        {
+          "name": "Matte Midnight",
+          "hex": "#1e293b"
+        },
+        {
+          "name": "Platinum Silver",
+          "hex": "#cbd5e1"
+        },
+        {
+          "name": "Desert Sand",
+          "hex": "#d97706"
+        }
+      ],
+      "tags": [
+        "wireless",
+        "noise-cancelling",
+        "bluetooth",
+        "audio",
+        "premium"
+      ],
+      "specs": {
+        "Driver Size": "40mm Titanium Dome",
+        "Battery Life": "40 Hours (ANC ON)",
+        "Connectivity": "Bluetooth 5.3 & 3.5mm Aux",
+        "Weight": "255g"
+      }
+    },
+    {
+      "id": "prod-2",
+      "title": "Titan Chrono Smartwatch & Health Tracker",
+      "description": "Aerospace-grade titanium casing, sapphire crystal display, ECG monitoring, and built-in dual-frequency GPS designed for extreme expeditions.",
+      "price": 329,
+      "originalPrice": 389,
+      "category": "Accessories",
+      "brand": "Titan Precision",
+      "rating": 4.8,
+      "reviewsCount": 89,
+      "stock": 18,
+      "featured": true,
+      "images": [
+        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?auto=format&fit=crop&w=800&q=80"
+      ],
+      "colors": [
+        {
+          "name": "Space Gray",
+          "hex": "#334155"
+        },
+        {
+          "name": "Solar Orange",
+          "hex": "#ea580c"
+        }
+      ],
+      "tags": [
+        "smartwatch",
+        "fitness",
+        "gps",
+        "titanium",
+        "wearable"
+      ],
+      "specs": {
+        "Display": "1.43\" AMOLED 1000 nits",
+        "Water Resistance": "10 ATM (100m)",
+        "Battery Life": "14 Days standard use",
+        "Sensors": "ECG, SpO2, Heart Rate, Barometer"
+      }
+    },
+    {
+      "id": "prod-3",
+      "title": "Minimalist Merino Wool Overcoat",
+      "description": "Tailored from 100% sustainably sourced extrafine Australian Merino wool. Naturally water-repellent, thermo-regulating, and tailored for a modern silhouette.",
+      "price": 198.5,
+      "originalPrice": 245,
+      "category": "Fashion",
+      "brand": "Nordic Tailor",
+      "rating": 4.7,
+      "reviewsCount": 62,
+      "stock": 12,
+      "featured": true,
+      "images": [
+        "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80"
+      ],
+      "colors": [
+        {
+          "name": "Charcoal Camel",
+          "hex": "#78350f"
+        },
+        {
+          "name": "Pitch Black",
+          "hex": "#0f172a"
+        },
+        {
+          "name": "Heather Ash",
+          "hex": "#64748b"
+        }
+      ],
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "tags": [
+        "coat",
+        "wool",
+        "winter",
+        "tailored",
+        "minimalist"
+      ],
+      "specs": {
+        "Material": "100% Extrafine Merino Wool",
+        "Lining": "Cupro breathable lining",
+        "Fit": "Contemporary relaxed drape",
+        "Care": "Dry clean only"
+      }
+    },
+    {
+      "id": "prod-4",
+      "title": "Lumina Ergonomic Mechanical Keyboard",
+      "description": "Hot-swappable gasket-mounted mechanical keyboard with south-facing RGB, lubed custom linear switches, and seamless triple-mode wireless connectivity.",
+      "price": 159.99,
+      "originalPrice": 179.99,
+      "category": "Electronics",
+      "brand": "KeySmith",
+      "rating": 4.9,
+      "reviewsCount": 112,
+      "stock": 35,
+      "featured": true,
+      "isNew": true,
+      "images": [
+        "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1595225476474-87563907a212?auto=format&fit=crop&w=800&q=80"
+      ],
+      "colors": [
+        {
+          "name": "Retro Cream",
+          "hex": "#fef3c7"
+        },
+        {
+          "name": "Cyber Cyberpunk",
+          "hex": "#4f46e5"
+        }
+      ],
+      "tags": [
+        "keyboard",
+        "mechanical",
+        "custom",
+        "rgb",
+        "desk-setup"
+      ],
+      "specs": {
+        "Layout": "75% Compact (82 Keys)",
+        "Mount Style": "Gasket Mount with Poron foam",
+        "Battery": "4000mAh Rechargeable",
+        "Connection": "2.4Ghz, BT 5.1, Type-C wired"
+      }
+    },
+    {
+      "id": "prod-5",
+      "title": "Verve Cloud Running Sneakers",
+      "description": "Engineered responsive foam midsole with dual-density torsional stability plate. Featherlight breathable mesh upper keeps your strides effortless.",
+      "price": 135,
+      "originalPrice": 160,
+      "category": "Fitness",
+      "brand": "AeroStriders",
+      "rating": 4.6,
+      "reviewsCount": 204,
+      "stock": 40,
+      "images": [
+        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&w=800&q=80"
+      ],
+      "colors": [
+        {
+          "name": "Fire Crimson",
+          "hex": "#dc2626"
+        },
+        {
+          "name": "Stealth Triple Black",
+          "hex": "#020617"
+        },
+        {
+          "name": "Arctic Ice",
+          "hex": "#0284c7"
+        }
+      ],
+      "sizes": [
+        "US 8",
+        "US 9",
+        "US 10",
+        "US 11",
+        "US 12"
+      ],
+      "tags": [
+        "shoes",
+        "sneakers",
+        "running",
+        "fitness",
+        "sport"
+      ],
+      "specs": {
+        "Weight": "210g (Size 9)",
+        "Drop": "8mm Heel-to-Toe",
+        "Upper": "100% Recycled Engineered Mesh"
+      }
+    },
+    {
+      "id": "prod-6",
+      "title": "Artisan Ceramic Pour-Over Coffee Station",
+      "description": "Hand-thrown stoneware dripper with double-walled thermal carafe and precision stainless steel mesh filter. Delivers the purest extraction note.",
+      "price": 74.5,
+      "category": "Home & Living",
+      "brand": "Kanso Studio",
+      "rating": 4.8,
+      "reviewsCount": 54,
+      "stock": 20,
+      "images": [
+        "https://images.unsplash.com/photo-1517256064527-09c73fc73e38?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80"
+      ],
+      "colors": [
+        {
+          "name": "Stone Grey Glaze",
+          "hex": "#94a3b8"
+        },
+        {
+          "name": "Terracotta Matte",
+          "hex": "#c2410c"
+        }
+      ],
+      "tags": [
+        "coffee",
+        "kitchen",
+        "ceramic",
+        "pour-over",
+        "home"
+      ],
+      "specs": {
+        "Capacity": "600ml (2-3 Cups)",
+        "Material": "High-fire ceramic & borosilicate glass",
+        "Dishwasher Safe": "Yes"
+      }
+    },
+    {
+      "id": "prod-7",
+      "title": "Handcrafted Full-Grain Leather Weekender Duffel",
+      "description": "Top-grain vegetable-tanned Italian leather with antique brass hardware, dedicated water-resistant shoe compartment, and padded 16-inch laptop pocket.",
+      "price": 279,
+      "originalPrice": 340,
+      "category": "Accessories",
+      "brand": "Vanguard Leatherworks",
+      "rating": 4.9,
+      "reviewsCount": 78,
+      "stock": 6,
+      "isNew": true,
+      "images": [
+        "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=800&q=80"
+      ],
+      "colors": [
+        {
+          "name": "Cognac Brown",
+          "hex": "#92400e"
+        },
+        {
+          "name": "Espresso Dark",
+          "hex": "#451a03"
+        }
+      ],
+      "tags": [
+        "bag",
+        "leather",
+        "travel",
+        "duffel",
+        "premium"
+      ],
+      "specs": {
+        "Dimensions": "52cm x 28cm x 26cm",
+        "Capacity": "42 Liters (Carry-on compliant)",
+        "Hardware": "Solid Brass YKK Zippers"
+      }
+    },
+    {
+      "id": "prod-8",
+      "title": "Zenith Smart Air Purifier & Ionizer",
+      "description": "Medical-grade H13 True HEPA filter capturing 99.97% of airborne particles as small as 0.1 microns. Ultra-quiet 21dB whisper mode with app sync.",
+      "price": 189.99,
+      "category": "Home & Living",
+      "brand": "PureBreeze",
+      "rating": 4.7,
+      "reviewsCount": 93,
+      "stock": 15,
+      "images": [
+        "https://images.unsplash.com/photo-1585338107529-13afc5f02586?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80"
+      ],
+      "tags": [
+        "purifier",
+        "home",
+        "hepa",
+        "health",
+        "smart-home"
+      ],
+      "specs": {
+        "Room Coverage": "Up to 550 sq. ft. in 30 mins",
+        "Filter Life": "6-8 Months (indicator light)",
+        "Power Consumption": "35W max"
+      }
+    },
+    {
+      "id": "prod-9",
+      "title": "Polaroid Prism Mirror Sunglasses",
+      "description": "Crafted with Mazzucchelli Italian acetate and polarized CR-39 lenses offering 100% UVA/UVB protection with anti-reflective back-coating.",
+      "price": 95,
+      "originalPrice": 120,
+      "category": "Accessories",
+      "brand": "Solstice Optics",
+      "rating": 4.5,
+      "reviewsCount": 41,
+      "stock": 30,
+      "images": [
+        "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=800&q=80"
+      ],
+      "colors": [
+        {
+          "name": "Tortoise Amber",
+          "hex": "#78350f"
+        },
+        {
+          "name": "Gloss Black",
+          "hex": "#0f172a"
+        }
+      ],
+      "tags": [
+        "sunglasses",
+        "accessories",
+        "eyewear",
+        "summer",
+        "fashion"
+      ],
+      "specs": {
+        "Lens Category": "Cat 3 Polarized",
+        "Frame Material": "Handcrafted Acetate",
+        "Hinge": "5-Barrel German hinges"
+      }
+    },
+    {
+      "id": "prod-10",
+      "title": "Pro-Grip Hex Rubber Dumbbells (Set of 2)",
+      "description": "High-density cast iron core coated in heavy-duty virgin rubber to protect floors and reduce noise. Knurled chrome ergonomic handle prevents slip.",
+      "price": 89.9,
+      "category": "Fitness",
+      "brand": "IronForge",
+      "rating": 4.8,
+      "reviewsCount": 167,
+      "stock": 22,
+      "images": [
+        "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80"
+      ],
+      "sizes": [
+        "10 lbs",
+        "15 lbs",
+        "20 lbs",
+        "25 lbs"
+      ],
+      "tags": [
+        "fitness",
+        "gym",
+        "workout",
+        "weights",
+        "strength"
+      ],
+      "specs": {
+        "Weight Options": "Pairs from 10lbs to 25lbs",
+        "Handle Diameter": "28mm contoured ergonomic",
+        "Finish": "Commercial-grade odorless rubber"
+      }
+    },
+    {
+      "id": "prod-11",
+      "title": "Organic Heavyweight French Terry Hoodie",
+      "description": "Knitted from 480 GSM 100% organic combed cotton. Pre-shrunk with double-needle ribbed side gussets for ultimate comfort and durability.",
+      "price": 110,
+      "originalPrice": 135,
+      "category": "Fashion",
+      "brand": "Nordic Tailor",
+      "rating": 4.8,
+      "reviewsCount": 88,
+      "stock": 26,
+      "images": [
+        "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80"
+      ],
+      "colors": [
+        {
+          "name": "Oatmeal Heather",
+          "hex": "#e2e8f0"
+        },
+        {
+          "name": "Washed Forest",
+          "hex": "#166534"
+        },
+        {
+          "name": "Deep Navy",
+          "hex": "#1e3a8a"
+        }
+      ],
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL",
+        "XXL"
+      ],
+      "tags": [
+        "hoodie",
+        "organic",
+        "streetwear",
+        "cotton",
+        "apparel"
+      ],
+      "specs": {
+        "Fabric": "480 GSM 100% Organic French Terry",
+        "Origin": "Ethically made in Portugal",
+        "Fit": "Boxy relaxed fit with drop shoulder"
+      }
+    },
+    {
+      "title": "bags",
+      "description": "new arrival bag",
+      "brand": "bag things",
+      "category": "Accessories",
+      "price": 99.98,
+      "originalPrice": 129.99,
+      "stock": 25,
+      "images": [
+        "https://zivifashion.com/cdn/shop/files/CustomizeBagpinkpurple.png?v=1761389238"
+      ],
+      "tags": [
+        "tech",
+        "premium"
+      ],
+      "isNew": true,
+      "id": "prod-1791893835958",
+      "rating": 5,
+      "reviewsCount": 0
+    }
+  ],
+  "users": [
+    {
+      "id": "usr-admin",
+      "name": "Nageswari (Admin)",
+      "email": "pokurinageswari@gmail.com",
+      "phone": "7013304012",
+      "password": "admin123",
+      "role": "admin",
+      "joinedDate": "2026-01-01"
+    },
+    {
+      "id": "usr-customer",
+      "name": "Alex Mercer",
+      "email": "user@dreamit.com",
+      "phone": "9123456789",
+      "password": "user123",
+      "role": "customer",
+      "joinedDate": "2026-05-15"
+    },
+    {
+      "id": "usr-keerthi",
+      "name": "keerthi1",
+      "email": "keerthi1@gmail.com",
+      "phone": "9876543210",
+      "password": "password123",
+      "role": "customer",
+      "joinedDate": "2026-10-13"
+    },
+    {
+      "id": "usr-1791876308533",
+      "name": "Administrator",
+      "email": "nageswaripokuri27042005@gmail.com",
+      "role": "customer",
+      "joinedDate": "2026-10-13",
+      "phone": "9999999999",
+      "password": "password123"
+    },
+    {
+      "id": "usr-1791879480532",
+      "name": "Nageswari Pokuri",
+      "email": "projectteam121@gmail.com",
+      "role": "customer",
+      "joinedDate": "2026-10-13",
+      "phone": "9999999999",
+      "password": "password123"
+    },
+    {
+      "id": "usr-1791879584240",
+      "name": "keerthi",
+      "email": "keerthikarnati57@gmail.com",
+      "role": "customer",
+      "joinedDate": "2026-10-13",
+      "phone": "9999999999",
+      "password": "password123"
+    },
+    {
+      "id": "usr-1791880847391",
+      "name": "keerthii",
+      "email": "teamp54321@gmail.com",
+      "phone": "9392213974",
+      "password": "keerthi",
+      "role": "customer",
+      "joinedDate": "2026-10-13"
+    },
+    {
+      "id": "usr-1791949527099",
+      "name": "bhagya",
+      "email": "bhagyachowdary1207@gmail.com",
+      "phone": "7842274273",
+      "password": "bhagyaa",
+      "role": "customer",
+      "joinedDate": "2026-10-14"
+    }
+  ],
+  "orders": [
+    {
+      "items": [
+        {
+          "id": "prod-4-Retro Cream-",
+          "product": {
+            "id": "prod-4",
+            "title": "Lumina Ergonomic Mechanical Keyboard",
+            "description": "Hot-swappable gasket-mounted mechanical keyboard with south-facing RGB, lubed custom linear switches, and seamless triple-mode wireless connectivity.",
+            "price": 159.99,
+            "originalPrice": 179.99,
+            "category": "Electronics",
+            "brand": "KeySmith",
+            "rating": 4.9,
+            "reviewsCount": 112,
+            "stock": 35,
+            "featured": true,
+            "isNew": true,
+            "images": [
+              "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=800&q=80",
+              "https://images.unsplash.com/photo-1595225476474-87563907a212?auto=format&fit=crop&w=800&q=80"
+            ],
+            "colors": [
+              {
+                "name": "Retro Cream",
+                "hex": "#fef3c7"
+              },
+              {
+                "name": "Cyber Cyberpunk",
+                "hex": "#4f46e5"
+              }
+            ],
+            "tags": [
+              "keyboard",
+              "mechanical",
+              "custom",
+              "rgb",
+              "desk-setup"
+            ],
+            "specs": {
+              "Layout": "75% Compact (82 Keys)",
+              "Mount Style": "Gasket Mount with Poron foam",
+              "Battery": "4000mAh Rechargeable",
+              "Connection": "2.4Ghz, BT 5.1, Type-C wired"
+            }
+          },
+          "quantity": 1,
+          "selectedColor": "Retro Cream",
+          "selectedSize": ""
+        }
+      ],
+      "subtotal": 159.99,
+      "discount": 0,
+      "shippingCost": 0,
+      "tax": 12.7992,
+      "total": 172.78920000000002,
+      "currency": "INR",
+      "customer": {
+        "fullName": "keerthii",
+        "email": "teamp54321@gmail.com",
+        "phone": "+91 9392213974",
+        "address": "42 MG Road, Koramangala",
+        "city": "Bengaluru",
+        "postalCode": "560034",
+        "country": "India"
+      },
+      "shippingMethod": {
+        "id": "standard",
+        "name": "Standard Delivery",
+        "cost": 0,
+        "estimatedDays": "3-5 business days",
+        "description": "Reliable postal shipping to your door"
+      },
+      "paymentMethod": "cod",
+      "status": "Confirmed",
+      "id": "ord-1791893583071",
+      "orderNumber": "DMT-398618",
+      "createdAt": "2026-10-13T12:13:03.071Z",
+      "trackingNumber": "TRK-YP7W61KY"
+    },
+    {
+      "items": [
+        {
+          "id": "prod-1-Matte Midnight-",
+          "product": {
+            "id": "prod-1",
+            "title": "Aura Studio Wireless Noise-Cancelling Headphones",
+            "description": "Immerse yourself in acoustic perfection with spatial audio, adaptive 45dB noise cancellation, and up to 40 hours of playtime on a single charge.",
+            "price": 249.99,
+            "originalPrice": 299.99,
+            "category": "Electronics",
+            "brand": "Acoustix Labs",
+            "rating": 4.9,
+            "reviewsCount": 148,
+            "stock": 22,
+            "featured": true,
+            "isNew": true,
+            "images": [
+              "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80",
+              "https://images.unsplash.com/photo-1484704849700-f032a568e944?auto=format&fit=crop&w=800&q=80",
+              "https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=800&q=80"
+            ],
+            "colors": [
+              {
+                "name": "Matte Midnight",
+                "hex": "#1e293b"
+              },
+              {
+                "name": "Platinum Silver",
+                "hex": "#cbd5e1"
+              },
+              {
+                "name": "Desert Sand",
+                "hex": "#d97706"
+              }
+            ],
+            "tags": [
+              "wireless",
+              "noise-cancelling",
+              "bluetooth",
+              "audio",
+              "premium"
+            ],
+            "specs": {
+              "Driver Size": "40mm Titanium Dome",
+              "Battery Life": "40 Hours (ANC ON)",
+              "Connectivity": "Bluetooth 5.3 & 3.5mm Aux",
+              "Weight": "255g"
+            }
+          },
+          "quantity": 1,
+          "selectedColor": "Matte Midnight",
+          "selectedSize": ""
+        }
+      ],
+      "subtotal": 249.99,
+      "discount": 0,
+      "shippingCost": 0,
+      "tax": 19.999200000000002,
+      "total": 269.9892,
+      "currency": "INR",
+      "customer": {
+        "fullName": "keerthi",
+        "email": "teamp54321@gmail.com",
+        "phone": "9392213974",
+        "address": "42 MG Road, Koramangala",
+        "city": "macherla",
+        "postalCode": "522426",
+        "country": "India"
+      },
+      "shippingMethod": {
+        "id": "standard",
+        "name": "Standard Delivery",
+        "cost": 0,
+        "estimatedDays": "3-5 business days",
+        "description": "Reliable postal shipping to your door"
+      },
+      "paymentMethod": "razorpay",
+      "razorpayPaymentId": "pay_rzp_MV6MKUMP",
+      "status": "Cancelled",
+      "id": "ord-1791892583953",
+      "orderNumber": "DMT-883071",
+      "createdAt": "2026-10-13T11:56:23.953Z",
+      "trackingNumber": "TRK-GWLLRSFL",
+      "cancellationReason": "Cancelled by Customer",
+      "cancelledAt": "2026-10-14T04:34:27.227Z"
+    }
+  ],
+  "lastSavedAt": "2026-10-14T06:03:48.467Z"
+}

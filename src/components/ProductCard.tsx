@@ -1,7 +1,7 @@
 import React from 'react';
 import { Product } from '../types';
 import { useShop } from '../context/ShopContext';
-import { Star, Heart, ShoppingBag, Eye } from 'lucide-react';
+import { Heart, ShoppingBag, Eye } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -104,19 +104,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           >
             {product.title}
           </button>
-
-          {/* Rating & Reviews */}
-          <div className="flex items-center gap-1.5 mt-2">
-            <div className="flex items-center text-amber-400">
-              <Star className="w-4 h-4 fill-current" />
-            </div>
-            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-              {product.rating}
-            </span>
-            <span className="text-xs text-slate-600 dark:text-slate-400">
-              ({product.reviewsCount})
-            </span>
-          </div>
 
           {/* Colors swatch preview if available */}
           {product.colors && product.colors.length > 0 && (

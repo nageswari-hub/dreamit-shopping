@@ -37,6 +37,7 @@ export const Navbar: React.FC = () => {
     setSelectedProduct,
     activeTab,
     setActiveTab,
+    userOrders,
     filters,
     setFilters,
     currentUser,
@@ -67,6 +68,20 @@ export const Navbar: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const navigateToSearchResults = () => {
+    setIsSearchFocused(false);
+    setMobileMenuOpen(false);
+    if (activeTab !== 'shop') {
+      setActiveTab('shop');
+    }
+    setTimeout(() => {
+      const catalogEl = document.getElementById('product-catalog');
+      if (catalogEl) {
+        catalogEl.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  };
 
   const handleSearchChange = (value: string) => {
     setFilters((prev) => ({ ...prev, search: value }));
@@ -142,14 +157,24 @@ export const Navbar: React.FC = () => {
                 : 'w-64 lg:w-80 mx-2'
             }`}
           >
-            <div
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                navigateToSearchResults();
+              }}
               className={`relative rounded-2xl transition-all duration-300 ${
                 isSearchFocused
                   ? 'ring-4 ring-brand-500/20 shadow-2xl bg-white dark:bg-slate-900'
                   : 'bg-slate-100/90 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-800'
               }`}
             >
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <button
+                type="submit"
+                aria-label="Submit Search"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-600 transition-colors cursor-pointer"
+              >
+                <Search className="w-4 h-4" />
+              </button>
               <input
                 type="text"
                 value={filters.search}
@@ -158,18 +183,25 @@ export const Navbar: React.FC = () => {
                   if (activeTab !== 'shop') setActiveTab('shop');
                 }}
                 onChange={(e) => handleSearchChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    navigateToSearchResults();
+                  }
+                }}
                 placeholder="Search products, brands, departments in DreamIT Mall..."
                 className="w-full pl-10 pr-9 py-2.5 rounded-2xl border border-transparent focus:border-brand-500 bg-transparent text-sm focus:outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400 font-medium"
               />
               {filters.search && (
                 <button
+                  type="button"
                   onClick={() => setFilters((prev) => ({ ...prev, search: '' }))}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               )}
-            </div>
+            </form>
 
             {/* Live Autocomplete & Search Popover */}
             {isSearchFocused && (
@@ -187,7 +219,7 @@ export const Navbar: React.FC = () => {
                         type="button"
                         onClick={() => {
                           handleSearchChange(tag);
-                          setIsSearchFocused(false);
+                          navigateToSearchResults();
                         }}
                         className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-brand-50 dark:bg-slate-800 dark:hover:bg-brand-950/60 text-slate-700 dark:text-slate-300 hover:text-brand-600 transition-colors cursor-pointer font-medium"
                       >
@@ -241,9 +273,7 @@ export const Navbar: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setIsSearchFocused(false);
-                      const catalogEl = document.getElementById('product-catalog');
-                      if (catalogEl) catalogEl.scrollIntoView({ behavior: 'smooth' });
+                      navigateToSearchResults();
                     }}
                     className="w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-center flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
@@ -277,7 +307,12 @@ export const Navbar: React.FC = () => {
               }`}
             >
               <Package className="w-4 h-4" />
-              My Orders & Returns
+              <span>My Orders & Returns</span>
+              {userOrders.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-brand-600 text-white text-[10px] font-bold">
+                  {userOrders.length}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setActiveTab('admin')}
@@ -472,24 +507,43 @@ export const Navbar: React.FC = () => {
 
         {/* Mobile Search Bar */}
         <div className="md:hidden pb-3">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              navigateToSearchResults();
+            }}
+            className="relative w-full"
+          >
+            <button
+              type="submit"
+              aria-label="Submit Search"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-600 cursor-pointer"
+            >
+              <Search className="w-4 h-4" />
+            </button>
             <input
               type="text"
               value={filters.search}
               onChange={(e) => handleSearchChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  navigateToSearchResults();
+                }
+              }}
               placeholder="Search DreamIT Mall products..."
               className="w-full pl-9 pr-8 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
             />
             {filters.search && (
               <button
+                type="button"
                 onClick={() => setFilters((prev) => ({ ...prev, search: '' }))}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             )}
-          </div>
+          </form>
         </div>
 
         {/* Mobile Navigation Dropdown */}
@@ -521,7 +575,12 @@ export const Navbar: React.FC = () => {
               }`}
             >
               <Package className="w-4 h-4" />
-              My Orders & Returns
+              <span>My Orders & Returns</span>
+              {userOrders.length > 0 && (
+                <span className="ml-auto px-1.5 py-0.2 rounded-full bg-brand-600 text-white text-[10px] font-bold">
+                  {userOrders.length}
+                </span>
+              )}
             </button>
             <button
               onClick={() => {

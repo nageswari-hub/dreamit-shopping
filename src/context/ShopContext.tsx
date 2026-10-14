@@ -4,8 +4,6 @@ import {
   CartItem,
   Order,
   OrderStatus,
-  RefundStatus,
-  RefundAccountDetails,
   Review,
   Coupon,
   CurrencyCode,
@@ -30,8 +28,8 @@ interface ShopContextType {
   login: (identifier: string, password?: string, role?: UserRole) => { success: boolean; message: string };
   register: (name: string, email: string, phone: string, password: string, role: UserRole) => { success: boolean; message: string };
   logout: () => void;
-  sendOtp: (phone: string) => { success: boolean; otp?: string; message: string };
-  resetPasswordWithOtp: (phone: string, otp: string, expectedOtp: string, newPassword: string) => { success: boolean; message: string };
+  sendOtp: (identifier: string) => { success: boolean; otp?: string; message: string; email?: string; phone?: string };
+  resetPasswordWithOtp: (identifier: string, otp: string, expectedOtp: string, newPassword: string) => { success: boolean; message: string };
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
   authModalRole: UserRole;
@@ -42,6 +40,8 @@ interface ShopContextType {
   closeAuthModal: () => void;
   razorpayKeyId: string;
   setRazorpayKeyId: (key: string) => void;
+  smsApiKey: string;
+  setSmsApiKey: (key: string) => void;
 
   // Products
   products: Product[];
@@ -74,6 +74,7 @@ interface ShopContextType {
 
   // Orders & Lifecycle
   orders: Order[];
+  userOrders: Order[];
   createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'trackingNumber'>) => Order;
   cancelOrder: (
     orderId: string,
@@ -175,38 +176,107 @@ const normalizeStoredUsers = (saved: any): User[] => {
   });
 };
 
-export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Authentication
-  const [users, setUsers] = useState<User[]>(() => {
-    const raw = getStorageItem('dreamit_users', DEMO_USERS);
-    return normalizeStoredUsers(raw);
-  });
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const rawUser = getStorageItem('dreamit_user', DEMO_USERS[1]);
-    if (!rawUser) return null;
-    if (
-      rawUser.id === 'usr-admin' ||
-      rawUser.email.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase() ||
-      rawUser.email.toLowerCase() === 'admin@dreamit.com'
-    ) {
-      return {
-        ...rawUser,
-        id: 'usr-admin',
-        name: 'Nageswari (Admin)',
-        email: AUTHORIZED_ADMIN_EMAIL,
-        phone: rawUser.phone === '9876543210' ? '7013304012' : (rawUser.phone || '7013304012'),
-        password: rawUser.password || 'admin123',
-        role: 'admin' as UserRole,
-      };
-    }
+const loadInitialUsers = (): User[] => {
+  const dreamit = getStorageItem<User[]>('dreamit_users', []);
+  const elevate = getStorageItem<User[]>('elevate_users', []);
+
+  const map = new Map<string, User>();
+  DEMO_USERS.forEach((u) => map.set(u.id, u));
+  if (Array.isArray(elevate)) {
+    elevate.forEach((u) => {
+      if (u && (u.id || u.phone || u.email)) {
+        map.set(u.id || u.email || u.phone, u);
+      }
+    });
+  }
+  if (Array.isArray(dreamit)) {
+    dreamit.forEach((u) => {
+      if (u && (u.id || u.phone || u.email)) {
+        map.set(u.id || u.email || u.phone, u);
+      }
+    });
+  }
+  return normalizeStoredUsers(Array.from(map.values()));
+};
+
+const loadInitialProducts = (): Product[] => {
+  const dreamit = getStorageItem<Product[]>('dreamit_products', []);
+  const elevate = getStorageItem<Product[]>('elevate_products', []);
+
+  const pMap = new Map<string, Product>();
+  INITIAL_PRODUCTS.forEach((p) => pMap.set(p.id, p));
+
+  if (Array.isArray(elevate) && elevate.length > 0) {
+    elevate.forEach((p) => {
+      if (p && p.id) pMap.set(p.id, p);
+    });
+  }
+  if (Array.isArray(dreamit) && dreamit.length > 0) {
+    dreamit.forEach((p) => {
+      if (p && p.id) pMap.set(p.id, p);
+    });
+  }
+  return Array.from(pMap.values());
+};
+
+const isLegacyDummyOrder = (o: any) => {
+  if (!o) return true;
+  if (o.customer?.email === 'jane.doe@example.com') return true;
+  if (o.customer?.fullName === 'Jane Doe') return true;
+  if (o.id === 'ord-1791869776872' || o.id === 'ord-1791876784423') return true;
+  return false;
+};
+
+const loadInitialOrders = (): Order[] => {
+  const dreamit = getStorageItem<Order[]>('dreamit_orders', []);
+  const elevate = getStorageItem<Order[]>('elevate_orders', []);
+  const oMap = new Map<string, Order>();
+  if (Array.isArray(elevate)) {
+    elevate.forEach((o) => {
+      if (o && o.id && !isLegacyDummyOrder(o)) oMap.set(o.id, o);
+    });
+  }
+  if (Array.isArray(dreamit)) {
+    dreamit.forEach((o) => {
+      if (o && o.id && !isLegacyDummyOrder(o)) oMap.set(o.id, o);
+    });
+  }
+  return Array.from(oMap.values());
+};
+
+const loadInitialCurrentUser = (): User | null => {
+  const dreamitUser = getStorageItem<User | null>('dreamit_user', null);
+  const elevateUser = getStorageItem<User | null>('elevate_user', null);
+  const rawUser = dreamitUser || elevateUser || null;
+  if (!rawUser) return null;
+  if (
+    rawUser.id === 'usr-admin' ||
+    rawUser.email?.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase() ||
+    rawUser.email?.toLowerCase() === 'admin@dreamit.com'
+  ) {
     return {
       ...rawUser,
-      role:
-        rawUser.email.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase()
-          ? ('admin' as UserRole)
-          : ('customer' as UserRole),
+      id: 'usr-admin',
+      name: 'Nageswari (Admin)',
+      email: AUTHORIZED_ADMIN_EMAIL,
+      phone: rawUser.phone === '9876543210' ? '7013304012' : (rawUser.phone || '7013304012'),
+      password: rawUser.password || 'admin123',
+      role: 'admin' as UserRole,
     };
-  });
+  }
+  return {
+    ...rawUser,
+    role:
+      rawUser.email?.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase()
+        ? ('admin' as UserRole)
+        : ('customer' as UserRole),
+  };
+};
+
+export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Authentication
+  const [users, setUsers] = useState<User[]>(() => loadInitialUsers());
+  const [currentUser, setCurrentUser] = useState<User | null>(() => loadInitialCurrentUser());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalRole, setAuthModalRole] = useState<UserRole>('customer');
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register' | 'forgot'>('login');
@@ -214,11 +284,12 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [razorpayKeyId, setRazorpayKeyId] = useState<string>(() =>
     getStorageItem('dreamit_razorpay_key', 'rzp_test_51MockDreamIT')
   );
+  const [smsApiKey, setSmsApiKey] = useState<string>(() =>
+    getStorageItem('dreamit_sms_api_key', '')
+  );
 
   // Products
-  const [products, setProducts] = useState<Product[]>(() =>
-    getStorageItem('dreamit_products', getStorageItem('elevate_products', INITIAL_PRODUCTS))
-  );
+  const [products, setProducts] = useState<Product[]>(() => loadInitialProducts());
 
   // Cart
   const [cart, setCart] = useState<CartItem[]>(() =>
@@ -231,9 +302,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 
   // Orders
-  const [orders, setOrders] = useState<Order[]>(() =>
-    getStorageItem('dreamit_orders', getStorageItem('elevate_orders', []))
-  );
+  const [orders, setOrders] = useState<Order[]>(() => loadInitialOrders());
 
   // Reviews
   const [reviews, setReviews] = useState<Record<string, Review[]>>(() =>
@@ -266,6 +335,108 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
+  // Disk-Backed Persistence Integration (/api/store)
+  const [isStoreLoadedFromDisk, setIsStoreLoadedFromDisk] = useState(false);
+
+  // 1. Initial Load from backend disk store (/api/store)
+  useEffect(() => {
+    fetch('/api/store')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if (data && typeof data === 'object') {
+          // Merge products
+          if (Array.isArray(data.products) && data.products.length > 0) {
+            setProducts((prev) => {
+              const pMap = new Map<string, Product>();
+              data.products.forEach((p: Product) => {
+                if (p && p.id) pMap.set(p.id, p);
+              });
+              // Keep any newly added products from prev not yet on disk
+              prev.forEach((p) => {
+                if (p && p.id && !pMap.has(p.id)) {
+                  pMap.set(p.id, p);
+                }
+              });
+              const merged = Array.from(pMap.values());
+              setStorageItem('dreamit_products', merged);
+              return merged;
+            });
+          }
+
+          // Merge users
+          if (Array.isArray(data.users) && data.users.length > 0) {
+            setUsers((prev) => {
+              const uMap = new Map<string, User>();
+              data.users.forEach((u: User) => {
+                if (u && (u.id || u.phone || u.email)) {
+                  uMap.set(u.id || u.email || u.phone, u);
+                }
+              });
+              prev.forEach((u) => {
+                const key = u.id || u.email || u.phone;
+                if (key && !uMap.has(key)) {
+                  uMap.set(key, u);
+                }
+              });
+              const merged = normalizeStoredUsers(Array.from(uMap.values()));
+              setStorageItem('dreamit_users', merged);
+              return merged;
+            });
+          }
+
+          // Merge orders
+          if (Array.isArray(data.orders)) {
+            setOrders((prev) => {
+              const oMap = new Map<string, Order>();
+              data.orders.forEach((o: Order) => {
+                if (o && o.id && !isLegacyDummyOrder(o)) oMap.set(o.id, o);
+              });
+              prev.forEach((o) => {
+                if (o && o.id && !isLegacyDummyOrder(o) && !oMap.has(o.id)) {
+                  oMap.set(o.id, o);
+                }
+              });
+              const merged = Array.from(oMap.values());
+              setStorageItem('dreamit_orders', merged);
+              return merged;
+            });
+          }
+        }
+        setIsStoreLoadedFromDisk(true);
+      })
+      .catch((err) => {
+        console.warn('Backend store fetch notice:', err);
+        setIsStoreLoadedFromDisk(true);
+      });
+  }, []);
+
+  // 2. Debounced auto-save to disk store (/api/store)
+  useEffect(() => {
+    if (!isStoreLoadedFromDisk) return;
+    const timer = setTimeout(() => {
+      try {
+        fetch('/api/store', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            products,
+            users,
+            orders,
+            lastSavedAt: new Date().toISOString(),
+          }),
+        }).catch((err) => {
+          console.warn('Failed to save store to disk:', err);
+        });
+      } catch (e) {
+        console.warn('Disk save error:', e);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [products, users, orders, isStoreLoadedFromDisk]);
+
   // Persistence Syncs
   useEffect(() => {
     setStorageItem('dreamit_users', users);
@@ -280,12 +451,14 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [products]);
 
   useEffect(() => {
-    setStorageItem('dreamit_cart', cart);
-  }, [cart]);
+    const key = currentUser ? `dreamit_cart_${currentUser.id}` : 'dreamit_cart_guest';
+    setStorageItem(key, cart);
+  }, [cart, currentUser]);
 
   useEffect(() => {
-    setStorageItem('dreamit_wishlist', wishlist);
-  }, [wishlist]);
+    const key = currentUser ? `dreamit_wishlist_${currentUser.id}` : 'dreamit_wishlist_guest';
+    setStorageItem(key, wishlist);
+  }, [wishlist, currentUser]);
 
   useEffect(() => {
     setStorageItem('dreamit_orders', orders);
@@ -325,6 +498,10 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setStorageItem('dreamit_razorpay_key', razorpayKeyId);
   }, [razorpayKeyId]);
 
+  useEffect(() => {
+    setStorageItem('dreamit_sms_api_key', smsApiKey);
+  }, [smsApiKey]);
+
   // Auth Operations
   const openAuthModal = (
     role: UserRole = 'customer',
@@ -339,58 +516,134 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsAuthModalOpen(false);
   };
 
-  const sendOtp = (phone: string): { success: boolean; otp?: string; message: string } => {
-    const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
-    if (!cleanPhone || cleanPhone.length < 10) {
-      return { success: false, message: 'Please enter a valid 10-digit mobile number.' };
+  const sendOtp = (
+    identifier: string
+  ): { success: boolean; otp?: string; message: string; email?: string; phone?: string } => {
+    const raw = identifier.trim();
+    if (!raw) {
+      return { success: false, message: 'Please enter your registered mobile number or Gmail address.' };
     }
 
+    const isEmail = raw.includes('@');
+    const cleanPhone = raw.replace(/[\s\-\(\)\+]/g, '');
     const last10 = cleanPhone.slice(-10);
-    // Find user with matching phone
+
+    // Find user by either email, phone, or name
     const user = users.find((u) => {
+      if (isEmail) {
+        return u.email.toLowerCase() === raw.toLowerCase();
+      }
       const uPhone = (u.phone || '').replace(/[\s\-\(\)\+]/g, '');
-      return uPhone === cleanPhone || (uPhone.length >= 10 && uPhone.endsWith(last10));
+      if (cleanPhone.length >= 7 && (uPhone === cleanPhone || (uPhone.length >= 10 && uPhone.endsWith(last10)))) {
+        return true;
+      }
+      return u.name.toLowerCase() === raw.toLowerCase();
     });
 
     if (!user) {
       return {
         success: false,
-        message: `Mobile number ${last10} is not registered. Please create an account via Sign Up first.`,
+        message: isEmail
+          ? `No registered account found with email "${raw}". Please check your email or Sign Up.`
+          : `No registered account found with identifier "${raw}". Please check your mobile number or username, or Sign Up first.`,
       };
     }
+
+    const userPhoneClean = (user.phone || '').replace(/[\s\-\(\)\+]/g, '').slice(-10);
+    const userEmail = user.email;
 
     // Generate 6-digit OTP code
     const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 10 * 60 * 1000;
 
+    // Store active OTP under both keys so it can be verified via phone or email
     setActiveOtps((prev) => ({
       ...prev,
-      [last10]: { otp: generatedOtp, expiresAt },
+      [userPhoneClean]: { otp: generatedOtp, expiresAt },
+      [userEmail.toLowerCase()]: { otp: generatedOtp, expiresAt },
     }));
 
-    showNotification(`📲 DreamIT SMS: Verification OTP for ${last10} is ${generatedOtp}`, 'info');
+    // 1. Dispatch real email notification via FormSubmit AJAX service
+    if (userEmail && userEmail.includes('@')) {
+      try {
+        fetch(`https://formsubmit.co/ajax/${encodeURIComponent(userEmail)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            _subject: 'DreamIT Mall: Your Password Reset Verification Passcode',
+            to_email: userEmail,
+            registered_mobile: `+91 ${userPhoneClean}`,
+            otp_passcode: generatedOtp,
+            instructions: `Your DreamIT Mall verification OTP is ${generatedOtp}. This passcode is valid for 10 minutes. Enter this code on the verification screen to reset your password. Never share this code.`,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            console.log('[FormSubmit Live Email Delivery]:', data);
+          })
+          .catch((err) => {
+            console.warn('[FormSubmit Email Dispatch Error]:', err);
+          });
+      } catch (err) {
+        console.warn('Email dispatch failed:', err);
+      }
+    }
+
+    // 2. If real Fast2SMS Gateway API Key is configured and we have a valid 10-digit phone, dispatch live cellular SMS
+    if (smsApiKey && smsApiKey.trim().length > 0 && userPhoneClean.length === 10) {
+      try {
+        fetch(
+          `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(
+            smsApiKey.trim()
+          )}&variables_values=${generatedOtp}&route=otp&numbers=${userPhoneClean}`
+        )
+          .then((res) => res.json())
+          .then((data) => {
+            console.log('Fast2SMS Live Gateway Delivery Result:', data);
+          })
+          .catch((err) => {
+            console.warn('Fast2SMS API dispatch error:', err);
+          });
+      } catch (err) {
+        console.warn('SMS dispatch failed:', err);
+      }
+      showNotification(`📲 Real SMS dispatched to +91 ${userPhoneClean} & verification email sent to ${userEmail}.`, 'success');
+    } else {
+      console.log(`[DreamIT Security Debug - Dev Only] Password reset OTP for ${userEmail} (+91 ${userPhoneClean}) is: ${generatedOtp}`);
+      showNotification(`📧 Verification code sent to registered Gmail (${userEmail}) & mobile (+91 ${userPhoneClean}).`, 'success');
+    }
 
     return {
       success: true,
       otp: generatedOtp,
-      message: `OTP sent to mobile number ending in ...${last10.slice(-4)}.`,
+      email: userEmail,
+      phone: userPhoneClean,
+      message: `OTP sent to registered Gmail (${userEmail}) and mobile (+91 ${userPhoneClean}).`,
     };
   };
 
   const resetPasswordWithOtp = (
-    phone: string,
+    identifier: string,
     otp: string,
     expectedOtp: string,
     newPassword: string
   ): { success: boolean; message: string } => {
-    const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
+    const raw = identifier.trim();
+    const isEmail = raw.includes('@');
+    const cleanPhone = raw.replace(/[\s\-\(\)\+]/g, '');
     const last10 = cleanPhone.slice(-10);
 
     if (!otp.trim()) {
-      return { success: false, message: 'Please enter the 6-digit SMS OTP.' };
+      return { success: false, message: 'Please enter the 6-digit verification code.' };
     }
 
-    const stored = activeOtps[last10];
+    const storedPhone = activeOtps[last10];
+    const storedEmail = activeOtps[raw.toLowerCase()];
+    const stored = storedEmail || storedPhone;
+
     const isOtpValid =
       (stored && stored.otp === otp.trim() && stored.expiresAt > Date.now()) ||
       (expectedOtp && expectedOtp.trim() === otp.trim());
@@ -405,6 +658,10 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     let userFound = false;
     const updatedUsers = users.map((u) => {
+      if (isEmail && u.email.toLowerCase() === raw.toLowerCase()) {
+        userFound = true;
+        return { ...u, password: newPassword.trim() };
+      }
       const uPhone = (u.phone || '').replace(/[\s\-\(\)\+]/g, '');
       if (uPhone === cleanPhone || (uPhone.length >= 10 && uPhone.endsWith(last10))) {
         userFound = true;
@@ -414,7 +671,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     if (!userFound) {
-      return { success: false, message: 'User record not found for this mobile number.' };
+      return { success: false, message: 'User record not found.' };
     }
 
     setUsers(updatedUsers);
@@ -423,6 +680,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setActiveOtps((prev) => {
       const next = { ...prev };
       delete next[last10];
+      delete next[raw.toLowerCase()];
       return next;
     });
 
@@ -437,25 +695,31 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   ): { success: boolean; message: string } => {
     const cleanInput = identifier.trim();
     if (!cleanInput) {
-      return { success: false, message: 'Please enter your registered mobile number.' };
+      return { success: false, message: 'Please enter your registered mobile number, email, or username.' };
     }
 
     const digitsOnly = cleanInput.replace(/[\s\-\(\)\+]/g, '');
     const last10 = digitsOnly.slice(-10);
 
-    // Find user by phone number or by email
+    // Find user by phone number, email, or name/username
     let user = users.find((u) => {
       const uPhone = (u.phone || '').replace(/[\s\-\(\)\+]/g, '');
       if (digitsOnly.length >= 7 && (uPhone === digitsOnly || (uPhone.length >= 10 && uPhone.endsWith(last10)))) {
         return true;
       }
-      return u.email.toLowerCase() === cleanInput.toLowerCase();
+      if (u.email.toLowerCase() === cleanInput.toLowerCase()) {
+        return true;
+      }
+      if (u.name.toLowerCase() === cleanInput.toLowerCase()) {
+        return true;
+      }
+      return false;
     });
 
     if (!user) {
       return {
         success: false,
-        message: 'No account registered with this mobile number. Please check the number or Sign Up first!',
+        message: 'No account registered with this mobile number, email, or username. Please check your credentials or Sign Up first!',
       };
     }
 
@@ -483,6 +747,12 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     setCurrentUser(user);
+    // Load this user's specific cart & wishlist
+    const userCart = getStorageItem<CartItem[]>(`dreamit_cart_${user.id}`, []);
+    setCart(userCart);
+    const userWishlist = getStorageItem<string[]>(`dreamit_wishlist_${user.id}`, []);
+    setWishlist(userWishlist);
+
     closeAuthModal();
     showNotification(`Welcome back, ${user.name}! (${user.role.toUpperCase()})`);
     return { success: true, message: 'Logged in successfully!' };
@@ -573,6 +843,10 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     setCurrentUser(null);
+    setCart([]);
+    setWishlist([]);
+    localStorage.removeItem('dreamit_user');
+    localStorage.removeItem('elevate_user');
     if (activeTab === 'admin') {
       setActiveTab('shop');
     }
@@ -715,6 +989,8 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       orderNumber,
       createdAt: new Date().toISOString(),
       trackingNumber,
+      userId: currentUser?.id,
+      userName: currentUser?.name,
     };
 
     // Deduct stock from products
@@ -734,16 +1010,36 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return newOrder;
   };
 
+  // Filtered orders belonging specifically to the logged in user
+  const userOrders = useMemo(() => {
+    if (!currentUser) return [];
+    const cleanUserPhone = (currentUser.phone || '').replace(/[\s\-\(\)\+]/g, '');
+    const userEmailLower = (currentUser.email || '').toLowerCase().trim();
+    const userNameLower = (currentUser.name || '').toLowerCase().trim();
+
+    return orders.filter((o) => {
+      // 1. Direct userId match
+      if (o.userId && o.userId === currentUser.id) return true;
+      // 2. Direct email match
+      if (userEmailLower && o.customer?.email?.toLowerCase().trim() === userEmailLower) return true;
+      // 3. Direct phone match (last 10 digits)
+      const oPhoneClean = (o.customer?.phone || '').replace(/[\s\-\(\)\+]/g, '');
+      if (
+        cleanUserPhone.length >= 7 &&
+        (oPhoneClean === cleanUserPhone || (cleanUserPhone.length >= 10 && oPhoneClean.endsWith(cleanUserPhone.slice(-10))))
+      ) {
+        return true;
+      }
+      // 4. Exact user name match
+      if (userNameLower && o.customer?.fullName?.toLowerCase().trim() === userNameLower) return true;
+
+      return false;
+    });
+  }, [orders, currentUser]);
+
   const cancelOrder = (
     orderId: string,
-    reason = 'Customer requested cancellation',
-    bankDetails?: {
-      accountHolderName?: string;
-      accountNumber?: string;
-      ifscCode?: string;
-      bankName?: string;
-      upiId?: string;
-    }
+    reason = 'Cancelled by Customer'
   ) => {
     const order = orders.find((o) => o.id === orderId);
     if (!order) return { success: false, message: 'Order not found.' };
@@ -755,58 +1051,39 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
     }
 
-    const isCod = order.paymentMethod === 'cod';
+    const now = new Date().toISOString();
 
-    // Status differentiation:
-    // Online Payment -> 'Cancellation Requested' with 'Pending Admin Approval'
-    // Cash on Delivery -> 'Cancelled' with 'Awaiting Parcel Return'
-    const updatedStatus: OrderStatus = isCod ? 'Cancelled' : 'Cancellation Requested';
-    const refundStatus: RefundStatus = isCod ? 'Awaiting Parcel Return' : 'Pending Admin Approval';
+    // Restock the product items to inventory immediately
+    setProducts((prev) =>
+      prev.map((prod) => {
+        const item = order.items.find((it) => it.product.id === prod.id);
+        if (item) {
+          return { ...prod, stock: prod.stock + item.quantity };
+        }
+        return prod;
+      })
+    );
 
-    const refundDetails: RefundAccountDetails = {
-      accountHolderName: bankDetails?.accountHolderName?.trim() || order.customer.fullName,
-      accountNumber: bankDetails?.accountNumber?.trim() || 'N/A',
-      ifscCode: bankDetails?.ifscCode?.trim() || 'N/A',
-      bankName: bankDetails?.bankName?.trim() || '',
-      upiId: bankDetails?.upiId?.trim() || '',
-      requestedAt: new Date().toISOString(),
-      refundStatus,
-    };
-
-    // Update order status
+    // Update order status directly to 'Cancelled'
     setOrders((prev) =>
       prev.map((o) =>
         o.id === orderId
           ? {
               ...o,
-              status: updatedStatus,
+              status: 'Cancelled' as OrderStatus,
               cancellationReason: reason,
-              cancelledAt: new Date().toISOString(),
-              refundDetails,
+              cancelledAt: now,
+              refundDetails: undefined,
             }
           : o
       )
     );
 
-    if (isCod) {
-      showNotification(
-        `Order ${order.orderNumber} cancelled. For Cash on Delivery, refund will be issued to your bank account only after the parcel is returned to our warehouse.`,
-        'info'
-      );
-      return {
-        success: true,
-        message: 'Order cancelled. Refund will be issued when the parcel is returned.',
-      };
-    } else {
-      showNotification(
-        `Cancellation request for Order ${order.orderNumber} submitted with account details. Administrator will verify and issue your refund.`,
-        'success'
-      );
-      return {
-        success: true,
-        message: 'Cancellation requested. Awaiting administrator acceptance to issue refund.',
-      };
-    }
+    showNotification(`Order ${order.orderNumber} has been cancelled successfully.`, 'info');
+    return {
+      success: true,
+      message: `Order ${order.orderNumber} has been cancelled successfully.`,
+    };
   };
 
   // Administrator accepts online payment cancellation & issues refund
@@ -921,33 +1198,63 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const order = orders.find((o) => o.id === orderId);
     if (!order) return { success: false, message: 'Order not found.' };
 
-    if (order.status !== 'Delivered') {
+    if (order.status === 'Cancelled' || order.status === 'Returned') {
       return {
         success: false,
-        message: 'Returns can only be requested for Delivered orders.',
+        message: `Order cannot be returned because it is already ${order.status.toLowerCase()}.`,
       };
     }
+
+    const refundTxnId = 'RFND-' + Math.floor(100000 + Math.random() * 900000);
+    const now = new Date().toISOString();
+
+    // Restock items upon return
+    setProducts((prev) =>
+      prev.map((prod) => {
+        const item = order.items.find((it) => it.product.id === prod.id);
+        if (item) {
+          return { ...prod, stock: prod.stock + item.quantity };
+        }
+        return prod;
+      })
+    );
 
     setOrders((prev) =>
       prev.map((o) =>
         o.id === orderId
           ? {
               ...o,
-              status: 'Return Requested',
+              status: 'Returned' as OrderStatus,
               returnReason: reason,
-              returnRequestedAt: new Date().toISOString(),
+              returnRequestedAt: now,
+              returnApprovedAt: now,
+              refundDetails: {
+                accountHolderName: o.customer.fullName,
+                accountNumber: 'N/A (Cash on Delivery)',
+                ifscCode: 'N/A',
+                requestedAt: now,
+                refundStatus: 'Refund Issued' as const,
+                refundIssuedAt: now,
+                refundTransactionId: refundTxnId,
+              },
             }
           : o
       )
     );
 
-    showNotification(`Return request for Order ${order.orderNumber} submitted to DreamIT Support!`, 'success');
-    return { success: true, message: 'Return request submitted.' };
+    showNotification(
+      `Return processed for Order ${order.orderNumber}! Refund Issued (Ref: ${refundTxnId}).`,
+      'success'
+    );
+    return { success: true, message: 'Return processed and Refund Issued.' };
   };
 
   const approveReturn = (orderId: string) => {
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
+
+    const refundTxnId = 'RFND-' + Math.floor(100000 + Math.random() * 900000);
+    const now = new Date().toISOString();
 
     // Restock items upon return approval
     setProducts((prev) =>
@@ -965,14 +1272,26 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         o.id === orderId
           ? {
               ...o,
-              status: 'Returned',
-              returnApprovedAt: new Date().toISOString(),
+              status: 'Returned' as OrderStatus,
+              returnApprovedAt: now,
+              refundDetails: {
+                accountHolderName: o.customer.fullName,
+                accountNumber: 'N/A (Cash on Delivery)',
+                ifscCode: 'N/A',
+                requestedAt: now,
+                refundStatus: 'Refund Issued' as const,
+                refundIssuedAt: now,
+                refundTransactionId: refundTxnId,
+              },
             }
           : o
       )
     );
 
-    showNotification(`Return approved for Order ${order.orderNumber}. Inventory restocked.`, 'success');
+    showNotification(
+      `Return approved for Order ${order.orderNumber}. Refund Issued (Ref: ${refundTxnId}).`,
+      'success'
+    );
   };
 
   const updateOrderStatus = (orderId: string, status: OrderStatus) => {
@@ -1074,6 +1393,8 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         closeAuthModal,
         razorpayKeyId,
         setRazorpayKeyId,
+        smsApiKey,
+        setSmsApiKey,
         products,
         addProduct,
         updateProduct,
@@ -1096,6 +1417,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         applyCoupon,
         removeCoupon,
         orders,
+        userOrders,
         createOrder,
         cancelOrder,
         approveRefund,

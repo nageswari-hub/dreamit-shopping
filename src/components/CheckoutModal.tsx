@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useShop } from '../context/ShopContext';
 import { SHIPPING_METHODS } from '../data/mockProducts';
 import { OrderCustomer, ShippingMethod } from '../types';
@@ -6,18 +6,13 @@ import confetti from 'canvas-confetti';
 import {
   X,
   ShieldCheck,
-  CreditCard,
   Truck,
   CheckCircle2,
   Lock,
   ArrowRight,
   ArrowLeft,
-  Sparkles,
-  QrCode,
   Banknote,
   Printer,
-  Zap,
-  Key,
 } from 'lucide-react';
 
 export const CheckoutModal: React.FC = () => {
@@ -32,39 +27,56 @@ export const CheckoutModal: React.FC = () => {
     currency,
     createOrder,
     setActiveTab,
-    razorpayKeyId,
-    setRazorpayKeyId,
+    currentUser,
   } = useShop();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Customer Shipping Details
-  const [customer, setCustomer] = useState<OrderCustomer>({
-    fullName: 'Jane Doe',
-    email: 'jane.doe@example.com',
-    phone: '+91 98765 43210',
+  const [customer, setCustomer] = useState<OrderCustomer>(() => ({
+    fullName: currentUser?.name || '',
+    email: currentUser?.email || '',
+    phone: currentUser?.phone
+      ? (currentUser.phone.startsWith('+91') ? currentUser.phone : `+91 ${currentUser.phone}`)
+      : '+91 ',
     address: '42 MG Road, Koramangala',
     city: 'Bengaluru',
     postalCode: '560034',
     country: 'India',
-  });
+  }));
 
   // Selected Shipping Method
   const [selectedShipping, setSelectedShipping] = useState<ShippingMethod>(SHIPPING_METHODS[0]);
 
-  // Payment Method
-  const [paymentType, setPaymentType] = useState<'razorpay' | 'card' | 'upi' | 'cod'>('razorpay');
-  const [customKeyInput, setCustomKeyInput] = useState(razorpayKeyId);
-  const [cardNumber, setCardNumber] = useState('4242 •••• •••• 4242');
-  const [cardExpiry, setCardExpiry] = useState('12/28');
-  const [cardCvc, setCardCvc] = useState('888');
-  const [cardName, setCardName] = useState('Jane Doe');
-  const [upiId, setUpiId] = useState('janedoe@okhdfcbank');
-
   // Confirmation state
   const [completedOrder, setCompletedOrder] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [razorpayError, setRazorpayError] = useState<string | null>(null);
+
+  // Reset checkout flow to Step 1 whenever modal is opened
+  useEffect(() => {
+    if (isCheckoutOpen) {
+      setStep(1);
+      setCompletedOrder(null);
+      setIsProcessing(false);
+      if (currentUser) {
+        setCustomer((prev) => ({
+          ...prev,
+          fullName: currentUser.name || prev.fullName,
+          email: currentUser.email || prev.email,
+          phone: currentUser.phone
+            ? (currentUser.phone.startsWith('+91') ? currentUser.phone : `+91 ${currentUser.phone}`)
+            : prev.phone,
+        }));
+      }
+    }
+  }, [isCheckoutOpen, currentUser]);
+
+  const handleCloseModal = () => {
+    setStep(1);
+    setCompletedOrder(null);
+    setIsProcessing(false);
+    setIsCheckoutOpen(false);
+  };
 
   if (!isCheckoutOpen) return null;
 
@@ -74,128 +86,40 @@ export const CheckoutModal: React.FC = () => {
   const estimatedTax = (cartSubtotal - cartDiscount) * 0.08;
   const orderTotal = Math.max(0, cartSubtotal - cartDiscount + actualShippingCost + estimatedTax);
 
-  // Helper to load Razorpay Checkout script dynamically
-  const loadRazorpayScript = (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if ((window as any).Razorpay) {
-        resolve(true);
-        return;
+  const handlePlaceCodOrder = () => {
+    setIsProcessing(true);
+    setTimeout(() => {
+      const order = createOrder({
+        items: cart,
+        subtotal: cartSubtotal,
+        discount: cartDiscount,
+        couponCode: appliedCoupon?.code,
+        shippingCost: actualShippingCost,
+        tax: estimatedTax,
+        total: orderTotal,
+        currency,
+        customer,
+        shippingMethod: { ...selectedShipping, cost: actualShippingCost },
+        paymentMethod: 'cod',
+        status: 'Confirmed',
+      });
+
+      setCompletedOrder(order);
+      setIsProcessing(false);
+      setStep(4);
+
+      // Confetti celebration
+      try {
+        confetti({
+          particleCount: 140,
+          spread: 90,
+          origin: { y: 0.6 },
+          colors: ['#10b981', '#f59e0b', '#0e8ce9', '#8b5cf6'],
+        });
+      } catch (err) {
+        console.log('Confetti error:', err);
       }
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.async = true;
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
-
-  const finalizeOrder = (paymentMethod: 'card' | 'upi' | 'cod' | 'razorpay', paymentId?: string) => {
-    const order = createOrder({
-      items: cart,
-      subtotal: cartSubtotal,
-      discount: cartDiscount,
-      couponCode: appliedCoupon?.code,
-      shippingCost: actualShippingCost,
-      tax: estimatedTax,
-      total: orderTotal,
-      currency,
-      customer,
-      shippingMethod: { ...selectedShipping, cost: actualShippingCost },
-      paymentMethod,
-      razorpayPaymentId: paymentId,
-      status: 'Confirmed',
-    });
-
-    setCompletedOrder(order);
-    setIsProcessing(false);
-    setStep(4);
-
-    // Confetti celebration
-    try {
-      confetti({
-        particleCount: 140,
-        spread: 90,
-        origin: { y: 0.6 },
-        colors: ['#0e8ce9', '#10b981', '#f59e0b', '#8b5cf6'],
-      });
-    } catch (err) {
-      console.log('Confetti error:', err);
-    }
-  };
-
-  const handleRazorpayPayment = async () => {
-    setIsProcessing(true);
-    setRazorpayError(null);
-
-    const loaded = await loadRazorpayScript();
-    if (!loaded) {
-      setRazorpayError('Unable to load Razorpay payment gateway SDK. Please check your internet connection.');
-      setIsProcessing(false);
-      return;
-    }
-
-    // Convert amount to INR paise
-    const inrRate = 84.0;
-    const amountInPaise = Math.round(orderTotal * (currency === 'INR' ? 1 : inrRate) * 100);
-
-    const options = {
-      key: customKeyInput || 'rzp_test_51MockDreamIT',
-      amount: amountInPaise,
-      currency: 'INR',
-      name: 'DreamIT Mall',
-      description: `Payment for ${cart.length} items (${formatPrice(orderTotal)})`,
-      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=200&q=80',
-      prefill: {
-        name: customer.fullName,
-        email: customer.email,
-        contact: customer.phone,
-      },
-      notes: {
-        address: `${customer.address}, ${customer.city}`,
-        mall: 'DreamIT Mall Online Store',
-      },
-      theme: {
-        color: '#0e8ce9',
-      },
-      handler: function (response: any) {
-        finalizeOrder('razorpay', response.razorpay_payment_id || `pay_${Date.now()}`);
-      },
-      modal: {
-        ondismiss: function () {
-          setIsProcessing(false);
-        },
-      },
-    };
-
-    try {
-      const rzpInstance = new (window as any).Razorpay(options);
-      rzpInstance.on('payment.failed', function (resp: any) {
-        setIsProcessing(false);
-        setRazorpayError(resp.error?.description || 'Payment was declined or cancelled.');
-      });
-      rzpInstance.open();
-    } catch (err: any) {
-      console.warn('Razorpay popup error:', err);
-      // If mock key rejected by Razorpay backend in sandbox, provide instant simulated success fallback
-      setIsProcessing(false);
-      setRazorpayError('Razorpay test mode initialized. You can also click "Simulate Razorpay Payment" below to test the verified order workflow instantly.');
-    }
-  };
-
-  const handleSimulateRazorpay = () => {
-    setIsProcessing(true);
-    setTimeout(() => {
-      const mockPayId = `pay_rzp_${Date.now().toString(36).toUpperCase()}`;
-      finalizeOrder('razorpay', mockPayId);
-    }, 1000);
-  };
-
-  const handleManualOrder = () => {
-    setIsProcessing(true);
-    setTimeout(() => {
-      finalizeOrder(paymentType);
-    }, 1000);
+    }, 700);
   };
 
   const handlePrintReceipt = () => {
@@ -219,14 +143,13 @@ export const CheckoutModal: React.FC = () => {
             </h2>
           </div>
 
-          {step !== 4 && (
-            <button
-              onClick={() => setIsCheckoutOpen(false)}
-              className="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
+          <button
+            onClick={handleCloseModal}
+            className="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            title="Close checkout"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Stepper Indicator */}
@@ -250,7 +173,7 @@ export const CheckoutModal: React.FC = () => {
               <span className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-xs">
                 3
               </span>
-              <span>Razorpay / Payment</span>
+              <span>Cash on Delivery</span>
             </div>
           </div>
         )}
@@ -290,7 +213,7 @@ export const CheckoutModal: React.FC = () => {
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Phone Number (for UPI & Delivery updates) *
+                    Phone Number (for Delivery SMS & Dispatch updates) *
                   </label>
                   <input
                     type="tel"
@@ -427,271 +350,118 @@ export const CheckoutModal: React.FC = () => {
             </div>
           )}
 
-          {/* STEP 3: Payment Method with Razorpay */}
+          {/* STEP 3: Payment Method (Exclusively Cash on Delivery) */}
           {step === 3 && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
-              <div className="lg:col-span-7 space-y-6">
+              <div className="lg:col-span-7 space-y-5">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">
-                    Select Payment Gateway
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 text-xs font-bold mb-2 border border-amber-300 dark:border-amber-900/60">
+                    <Banknote className="w-3.5 h-3.5" />
+                    <span>Payment Gateway: Cash on Delivery Only</span>
+                  </div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                    Cash on Delivery (COD)
                   </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    No advance online payment required. Pay safely in cash or scan delivery QR upon courier arrival at your doorstep.
+                  </p>
+                </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {/* Razorpay Tab */}
-                    <button
-                      type="button"
-                      onClick={() => setPaymentType('razorpay')}
-                      className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer transition-all ${
-                        paymentType === 'razorpay'
-                          ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950/70 dark:text-brand-300 ring-2 ring-brand-500/20'
-                          : 'border-slate-200 dark:border-slate-800 text-slate-600'
-                      }`}
-                    >
-                      <Zap className="w-4 h-4 text-brand-600" />
-                      <span>Razorpay</span>
-                    </button>
+                {/* 3 Trust Badges */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 dark:text-white text-[11px]">0% Advance Risk</div>
+                      <div className="text-[10px] text-slate-500">Zero card details needed</div>
+                    </div>
+                  </div>
 
-                    {/* Card Tab */}
-                    <button
-                      type="button"
-                      onClick={() => setPaymentType('card')}
-                      className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer transition-all ${
-                        paymentType === 'card'
-                          ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950/70 dark:text-brand-300'
-                          : 'border-slate-200 dark:border-slate-800 text-slate-600'
-                      }`}
-                    >
-                      <CreditCard className="w-4 h-4" />
-                      <span>Card</span>
-                    </button>
+                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
+                      <Truck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 dark:text-white text-[11px]">Doorstep Delivery</div>
+                      <div className="text-[10px] text-slate-500">Pay when parcel arrives</div>
+                    </div>
+                  </div>
 
-                    {/* UPI Tab */}
-                    <button
-                      type="button"
-                      onClick={() => setPaymentType('upi')}
-                      className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer transition-all ${
-                        paymentType === 'upi'
-                          ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950/70 dark:text-brand-300'
-                          : 'border-slate-200 dark:border-slate-800 text-slate-600'
-                      }`}
-                    >
-                      <QrCode className="w-4 h-4" />
-                      <span>UPI ID</span>
-                    </button>
-
-                    {/* COD Tab */}
-                    <button
-                      type="button"
-                      onClick={() => setPaymentType('cod')}
-                      className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 cursor-pointer transition-all ${
-                        paymentType === 'cod'
-                          ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950/70 dark:text-brand-300'
-                          : 'border-slate-200 dark:border-slate-800 text-slate-600'
-                      }`}
-                    >
+                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
                       <Banknote className="w-4 h-4" />
-                      <span>COD</span>
-                    </button>
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 dark:text-white text-[11px]">Flexible Mode</div>
+                      <div className="text-[10px] text-slate-500">Cash or UPI upon delivery</div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Razorpay Real-Time Interface */}
-                {paymentType === 'razorpay' && (
-                  <div className="p-5 rounded-2xl bg-gradient-to-br from-brand-50/70 via-indigo-50/40 to-slate-50 dark:from-slate-800/80 dark:to-slate-900 border border-brand-200 dark:border-slate-700 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center font-black text-xs">
-                          R
-                        </div>
-                        <div>
-                          <span className="font-extrabold text-sm text-slate-900 dark:text-white block">
-                            Razorpay Live Checkout
-                          </span>
-                          <span className="text-[11px] text-slate-500">
-                            UPI (GPay / PhonePe / Paytm / QR), Cards, NetBanking
-                          </span>
-                        </div>
-                      </div>
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-black uppercase">
-                        Real-Time
-                      </span>
+                {/* Delivery & Cash Amount Box */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50/80 via-white to-slate-50 dark:from-slate-800/80 dark:to-slate-900 border border-amber-200/90 dark:border-slate-700 space-y-3 text-xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-amber-200/60 dark:border-slate-700">
+                    <span className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5 text-xs">
+                      <Banknote className="w-4 h-4 text-amber-600" />
+                      <span>Cash Amount to Keep Ready:</span>
+                    </span>
+                    <span className="font-black text-lg text-slate-900 dark:text-white font-mono">
+                      {formatPrice(orderTotal)}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 text-slate-600 dark:text-slate-300 text-[11px]">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Recipient Name:</span>
+                      <span className="font-semibold text-slate-900 dark:text-white">{customer.fullName} ({customer.phone})</span>
                     </div>
-
-                    <div className="grid grid-cols-3 gap-2 py-2 text-center text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                      <div className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                        📱 UPI QR & Apps
-                      </div>
-                      <div className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                        💳 All Indian & Global Cards
-                      </div>
-                      <div className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                        🏦 50+ NetBanking Banks
-                      </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Delivery Address:</span>
+                      <span className="font-medium text-right max-w-xs">{customer.address}, {customer.city} - {customer.postalCode}</span>
                     </div>
-
-                    {/* Razorpay Key ID Configuration */}
-                    <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700">
-                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                        <span className="flex items-center gap-1">
-                          <Key className="w-3.5 h-3.5 text-brand-600" />
-                          <span>Razorpay Key ID (Live / Test)</span>
-                        </span>
-                        <span className="text-[10px] text-slate-400">Sandbox Test Key Pre-loaded</span>
-                      </div>
-                      <input
-                        type="text"
-                        value={customKeyInput}
-                        onChange={(e) => {
-                          setCustomKeyInput(e.target.value);
-                          setRazorpayKeyId(e.target.value);
-                        }}
-                        placeholder="rzp_test_... or your live Key ID"
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono"
-                      />
-                    </div>
-
-                    {razorpayError && (
-                      <p className="text-xs text-rose-500 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 font-semibold">
-                        {razorpayError}
-                      </p>
-                    )}
-
-                    <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={handleRazorpayPayment}
-                        disabled={isProcessing}
-                        className="flex-1 py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-xs shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
-                      >
-                        <Zap className="w-4 h-4 fill-current" />
-                        <span>{isProcessing ? 'Launching Razorpay...' : `Launch Razorpay • ${formatPrice(orderTotal)}`}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleSimulateRazorpay}
-                        disabled={isProcessing}
-                        className="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all"
-                        title="Quick simulated test payment"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                        <span>Simulate Pay</span>
-                      </button>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Shipping Courier:</span>
+                      <span className="font-semibold text-brand-600 dark:text-brand-400">{selectedShipping.name} ({selectedShipping.estimatedDays})</span>
                     </div>
                   </div>
-                )}
+                </div>
 
-                {/* Card Fields */}
-                {paymentType === 'card' && (
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
-                        Card Number
-                      </label>
-                      <div className="relative">
-                        <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input
-                          type="text"
-                          value={cardNumber}
-                          onChange={(e) => setCardNumber(e.target.value)}
-                          placeholder="4242 4242 4242 4242"
-                          className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
-                          Expiry Date (MM/YY)
-                        </label>
-                        <input
-                          type="text"
-                          value={cardExpiry}
-                          onChange={(e) => setCardExpiry(e.target.value)}
-                          placeholder="12/28"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
-                          CVC / CVV
-                        </label>
-                        <input
-                          type="password"
-                          maxLength={4}
-                          value={cardCvc}
-                          onChange={(e) => setCardCvc(e.target.value)}
-                          placeholder="•••"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
-                        Cardholder Name
-                      </label>
-                      <input
-                        type="text"
-                        value={cardName}
-                        onChange={(e) => setCardName(e.target.value)}
-                        placeholder="Name on card"
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
-                      />
-                    </div>
-                  </div>
-                )}
+                {/* Policy Note */}
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+                  <p>
+                    • <strong>Cash on Delivery Refund Policy:</strong> In case of cancellation or return, refund will be issued to your bank account after the parcel is returned to our warehouse.
+                  </p>
+                  <p>
+                    • Please keep the exact amount ready upon delivery. An SMS dispatch alert will be sent to <strong>{customer.phone}</strong>.
+                  </p>
+                </div>
 
-                {/* UPI Fields */}
-                {paymentType === 'upi' && (
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
-                      Virtual Payment Address (VPA / UPI ID)
-                    </label>
-                    <input
-                      type="text"
-                      value={upiId}
-                      onChange={(e) => setUpiId(e.target.value)}
-                      placeholder="username@okhdfcbank"
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono"
-                    />
-                    <p className="text-[11px] text-slate-500">
-                      Payment request will be dispatched to your UPI application.
-                    </p>
-                  </div>
-                )}
-
-                {/* COD Info */}
-                {paymentType === 'cod' && (
-                  <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-xs text-amber-900 dark:text-amber-200">
-                    Pay safely with cash or contactless UPI upon courier arrival at your doorstep.
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center pt-4">
+                {/* Action Buttons */}
+                <div className="flex justify-between items-center pt-2">
                   <button
                     onClick={() => setStep(2)}
-                    className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 cursor-pointer"
+                    className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     <span>Back</span>
                   </button>
 
-                  {paymentType !== 'razorpay' && (
-                    <button
-                      onClick={handleManualOrder}
-                      disabled={isProcessing}
-                      className="px-7 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer disabled:opacity-50"
-                    >
-                      {isProcessing ? (
-                        <span>Processing...</span>
-                      ) : (
-                        <>
-                          <ShieldCheck className="w-4 h-4" />
-                          <span>Place Order • {formatPrice(orderTotal)}</span>
-                        </>
-                      )}
-                    </button>
-                  )}
+                  <button
+                    onClick={handlePlaceCodOrder}
+                    disabled={isProcessing}
+                    className="px-7 py-3.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-xs flex items-center gap-2 shadow-lg shadow-amber-600/25 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {isProcessing ? (
+                      <span>Placing Order...</span>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Place Cash on Delivery Order • {formatPrice(orderTotal)}</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -761,19 +531,19 @@ export const CheckoutModal: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-300 text-xs font-bold">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Payment Verified & Order Placed!</span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Order Confirmed • Cash on Delivery</span>
                 </span>
                 <h3 className="text-2xl font-black text-slate-900 dark:text-white">
                   Thank You, {completedOrder.customer.fullName}!
                 </h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Your payment was authorized and received at DreamIT Mall. Your tracking code and official tax invoice have been generated below.
+                  Your Cash on Delivery order has been successfully placed at DreamIT Mall. Pay safely upon arrival. Your tracking code and invoice are generated below.
                 </p>
               </div>
 
-              {/* Order ID & Razorpay Payment ID Box */}
+              {/* Order ID & COD Payment Summary Box */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs space-y-2 text-left">
                 <div className="flex justify-between">
                   <span className="text-slate-500 font-medium">Order Number:</span>
@@ -781,17 +551,15 @@ export const CheckoutModal: React.FC = () => {
                     {completedOrder.orderNumber}
                   </span>
                 </div>
-                {completedOrder.razorpayPaymentId && (
-                  <div className="flex justify-between items-center p-2 rounded-xl bg-brand-50/80 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-900">
-                    <span className="text-brand-900 dark:text-brand-300 font-bold flex items-center gap-1">
-                      <Zap className="w-3.5 h-3.5 text-brand-600" />
-                      <span>Razorpay Payment ID:</span>
-                    </span>
-                    <span className="font-mono font-bold text-brand-700 dark:text-brand-300">
-                      {completedOrder.razorpayPaymentId}
-                    </span>
-                  </div>
-                )}
+                <div className="flex justify-between items-center p-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900">
+                  <span className="text-amber-900 dark:text-amber-300 font-bold flex items-center gap-1.5">
+                    <Banknote className="w-4 h-4 text-amber-600" />
+                    <span>Payment Method:</span>
+                  </span>
+                  <span className="font-bold text-amber-800 dark:text-amber-200">
+                    Cash on Delivery (COD)
+                  </span>
+                </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500 font-medium">Tracking Code:</span>
                   <span className="font-mono font-bold text-brand-600 dark:text-brand-400">
@@ -805,7 +573,7 @@ export const CheckoutModal: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-700">
-                  <span className="text-slate-500 font-medium">Total Paid:</span>
+                  <span className="text-slate-500 font-medium">Payable on Delivery:</span>
                   <span className="font-black text-slate-900 dark:text-white">
                     {formatPrice(completedOrder.total)}
                   </span>
@@ -816,7 +584,7 @@ export const CheckoutModal: React.FC = () => {
               <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                 <button
                   onClick={() => {
-                    setIsCheckoutOpen(false);
+                    handleCloseModal();
                     setActiveTab('orders');
                   }}
                   className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
@@ -832,7 +600,7 @@ export const CheckoutModal: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
-                    setIsCheckoutOpen(false);
+                    handleCloseModal();
                     setActiveTab('shop');
                   }}
                   className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer"

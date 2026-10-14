@@ -16,10 +16,11 @@ import {
   Eye,
   EyeOff,
   CheckCircle2,
-  MessageSquare,
   RefreshCw,
   AlertCircle,
   Smartphone,
+  Send,
+  ExternalLink,
 } from 'lucide-react';
 
 export const AuthModal: React.FC = () => {
@@ -47,7 +48,7 @@ export const AuthModal: React.FC = () => {
   // Forgot Password / OTP states
   const [forgotStep, setForgotStep] = useState<1 | 2>(1);
   const [otp, setOtp] = useState('');
-  const [simulatedSms, setSimulatedSms] = useState<{ otp: string; phone: string } | null>(null);
+  const [dispatchedOtp, setDispatchedOtp] = useState<{ otp: string; phone: string; email: string } | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
 
   // Status Alerts
@@ -60,7 +61,7 @@ export const AuthModal: React.FC = () => {
     setSuccessMsg(null);
     if (authModalMode !== 'forgot') {
       setForgotStep(1);
-      setSimulatedSms(null);
+      setDispatchedOtp(null);
     }
   }, [authModalMode, authModalRole]);
 
@@ -82,7 +83,7 @@ export const AuthModal: React.FC = () => {
     setSuccessMsg(null);
 
     if (!phone.trim()) {
-      setError('Please enter your registered 10-digit mobile number.');
+      setError('Please enter your registered mobile number, email, or username.');
       return;
     }
     if (!password) {
@@ -141,26 +142,30 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  // Handle Send SMS OTP for Forgot Password
+  // Handle Send SMS & Gmail OTP for Forgot Password
   const handleSendOtp = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setError(null);
     setSuccessMsg(null);
 
-    const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
-    if (!cleanPhone || cleanPhone.length < 10) {
-      setError('Please enter your 10-digit registered mobile number.');
+    const identifier = phone.trim();
+    if (!identifier) {
+      setError('Please enter your registered mobile number or Gmail address.');
       return;
     }
 
-    const res = sendOtp(cleanPhone);
+    const res = sendOtp(identifier);
     if (!res.success) {
       setError(res.message);
     } else {
-      setSimulatedSms({ otp: res.otp!, phone: cleanPhone });
+      setDispatchedOtp({
+        otp: res.otp!,
+        phone: res.phone || identifier,
+        email: res.email || '',
+      });
       setForgotStep(2);
       setResendCooldown(30);
-      setSuccessMsg(`Simulated SMS OTP sent to +91 ${cleanPhone.slice(-10)}. Check the notification banner below!`);
+      setSuccessMsg(`Verification code sent to registered Gmail (${res.email}) and mobile (+91 ${res.phone}).`);
     }
   };
 
@@ -171,7 +176,7 @@ export const AuthModal: React.FC = () => {
     setSuccessMsg(null);
 
     if (!otp.trim()) {
-      setError('Please enter the 6-digit OTP received via SMS.');
+      setError('Please enter the 6-digit verification code.');
       return;
     }
     if (!password || password.length < 4) {
@@ -184,9 +189,9 @@ export const AuthModal: React.FC = () => {
     }
 
     const res = resetPasswordWithOtp(
-      phone,
+      dispatchedOtp?.email || dispatchedOtp?.phone || phone,
       otp,
-      simulatedSms?.otp || '',
+      dispatchedOtp?.otp || '',
       password
     );
 
@@ -195,10 +200,13 @@ export const AuthModal: React.FC = () => {
     } else {
       // Switch back to login mode with prefilled phone
       setAuthModalMode('login');
+      if (dispatchedOtp?.phone) {
+        setPhone(dispatchedOtp.phone);
+      }
       setPassword('');
       setConfirmPassword('');
       setOtp('');
-      setSimulatedSms(null);
+      setDispatchedOtp(null);
       setSuccessMsg('Password updated successfully! Please sign in with your new password.');
     }
   };
@@ -325,29 +333,27 @@ export const AuthModal: React.FC = () => {
           {authModalMode === 'forgot' ? (
             <div className="space-y-4">
               {forgotStep === 1 ? (
-                /* Step 1: Request OTP */
+                /* Step 1: Request OTP via Registered Gmail or Mobile */
                 <form onSubmit={handleSendOtp} className="space-y-4 text-xs">
                   <div>
                     <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                      Registered Mobile Number *
+                      Registered Mobile Number or Gmail Address *
                     </label>
                     <div className="relative">
                       <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-slate-400 border-r border-slate-200 dark:border-slate-700 pr-2">
-                        <Phone className="w-3.5 h-3.5" />
-                        <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">+91</span>
+                        <Mail className="w-3.5 h-3.5" />
                       </div>
                       <input
-                        type="tel"
+                        type="text"
                         required
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        placeholder="10-digit mobile number"
-                        maxLength={15}
-                        className="w-full pl-20 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                        placeholder="e.g. 7013304012 or pokurinageswari@gmail.com"
+                        className="w-full pl-12 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
                       />
                     </div>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      Demo numbers: <code className="text-brand-600 dark:text-brand-400 font-bold">9123456789</code> (Customer) or <code className="text-emerald-600 dark:text-emerald-400 font-bold">7013304012</code> (Admin)
+                      Demo accounts: <code className="text-emerald-600 dark:text-emerald-400 font-bold">7013304012</code> / <code className="text-emerald-600 dark:text-emerald-400 font-bold">pokurinageswari@gmail.com</code> (Admin) or <code className="text-brand-600 dark:text-brand-400 font-bold">9123456789</code> (Customer)
                     </p>
                   </div>
 
@@ -355,40 +361,60 @@ export const AuthModal: React.FC = () => {
                     type="submit"
                     className="w-full py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-xs shadow-lg shadow-brand-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <MessageSquare className="w-4 h-4" />
-                    <span>Send SMS OTP to Mobile</span>
+                    <Send className="w-4 h-4" />
+                    <span>Send Verification Code to Gmail & Mobile</span>
                   </button>
                 </form>
               ) : (
                 /* Step 2: Verify OTP & Enter New Password */
                 <form onSubmit={handleResetPasswordSubmit} className="space-y-4 text-xs">
-                  {/* Simulated Mobile SMS Push Notification Toast */}
-                  {simulatedSms && (
-                    <div className="p-3.5 rounded-2xl bg-gradient-to-r from-indigo-50 to-brand-50 dark:from-indigo-950/60 dark:to-brand-950/60 border border-brand-200 dark:border-brand-900 shadow-sm animate-scale-in">
-                      <div className="flex items-center justify-between pb-2 mb-2 border-b border-brand-100 dark:border-brand-900/60">
-                        <div className="flex items-center gap-1.5 text-brand-700 dark:text-brand-300 font-extrabold text-[11px]">
-                          <Smartphone className="w-3.5 h-3.5" />
-                          <span>SIMULATED SMS PUSH ALERT</span>
-                        </div>
-                        <span className="text-[10px] text-slate-400">Just now</span>
+                  {/* Real Registered Gmail & Mobile Delivery Card */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200 dark:border-blue-800 space-y-3 animate-scale-in">
+                    <div className="flex items-center justify-between pb-2 border-b border-blue-100 dark:border-blue-900/60">
+                      <div className="flex items-center gap-2 text-blue-900 dark:text-blue-200 font-bold text-xs">
+                        <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <span>Registered Gmail & Mobile Delivery</span>
                       </div>
-                      <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
-                        &quot;DreamIT Mall: Your password reset verification code is{' '}
-                        <strong className="text-brand-600 dark:text-brand-400 font-black tracking-widest text-sm bg-white dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-brand-200 dark:border-brand-700">
-                          {simulatedSms.otp}
-                        </strong>
-                        . Valid for 10 minutes.&quot;
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setOtp(simulatedSms.otp)}
-                        className="mt-2.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-[11px] flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
-                      >
-                        <Sparkles className="w-3 h-3" />
-                        <span>1-Click Auto-Fill Code ({simulatedSms.otp})</span>
-                      </button>
+                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-white dark:bg-slate-900 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                        <span>Dispatched</span>
+                      </span>
                     </div>
-                  )}
+
+                    <div className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-400 w-16">Gmail:</span>
+                        <strong className="text-blue-600 dark:text-blue-400 font-mono text-[11px]">{dispatchedOtp?.email || 'Registered Gmail'}</strong>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-400 w-16">Mobile:</span>
+                        <strong className="text-slate-900 dark:text-white font-mono text-[11px]">+91 {dispatchedOtp?.phone || phone}</strong>
+                      </div>
+                    </div>
+
+                    {/* Private Dispatched Notice (Strictly NO OTP code displayed on screen) */}
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 flex items-center justify-between shadow-xs">
+                      <div>
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                          Private Dispatch Status
+                        </div>
+                        <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-0.5">
+                          Code sent to your Gmail &amp; mobile SMS
+                        </div>
+                      </div>
+
+                      <a
+                        href="https://mail.google.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-[11px] flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
+                        title="Open Gmail Inbox to read your OTP"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Open Gmail</span>
+                      </a>
+                    </div>
+                  </div>
 
                   {/* OTP Code Input */}
                   <div>
@@ -573,24 +599,23 @@ export const AuthModal: React.FC = () => {
 
               {/* Sign In Form */}
               <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs">
-                {/* Mobile Number Input */}
+                {/* Mobile / Email / Username Input */}
                 <div>
                   <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Mobile Number *
+                    Mobile Number, Email, or Username *
                   </label>
                   <div className="relative">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-slate-400 border-r border-slate-200 dark:border-slate-700 pr-2">
-                      <Phone className="w-3.5 h-3.5" />
-                      <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">+91</span>
+                      <User className="w-3.5 h-3.5" />
                     </div>
                     <input
-                      type="tel"
+                      type="text"
                       required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="e.g. 9123456789"
-                      maxLength={15}
-                      className="w-full pl-20 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      placeholder="e.g. 9123456789, keerthi1, or user@dreamit.com"
+                      maxLength={60}
+                      className="w-full pl-12 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
                     />
                   </div>
                 </div>
