@@ -76,7 +76,7 @@
       "brand": "Titan Precision",
       "rating": 4.8,
       "reviewsCount": 89,
-      "stock": 18,
+      "stock": 25,
       "featured": true,
       "images": [
         "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80",
@@ -293,7 +293,7 @@
       "brand": "Vanguard Leatherworks",
       "rating": 4.9,
       "reviewsCount": 78,
-      "stock": 6,
+      "stock": 0,
       "isNew": true,
       "images": [
         "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80",
@@ -347,44 +347,6 @@
         "Room Coverage": "Up to 550 sq. ft. in 30 mins",
         "Filter Life": "6-8 Months (indicator light)",
         "Power Consumption": "35W max"
-      }
-    },
-    {
-      "id": "prod-9",
-      "title": "Polaroid Prism Mirror Sunglasses",
-      "description": "Crafted with Mazzucchelli Italian acetate and polarized CR-39 lenses offering 100% UVA/UVB protection with anti-reflective back-coating.",
-      "price": 95,
-      "originalPrice": 120,
-      "category": "Accessories",
-      "brand": "Solstice Optics",
-      "rating": 4.5,
-      "reviewsCount": 41,
-      "stock": 30,
-      "images": [
-        "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=800&q=80"
-      ],
-      "colors": [
-        {
-          "name": "Tortoise Amber",
-          "hex": "#78350f"
-        },
-        {
-          "name": "Gloss Black",
-          "hex": "#0f172a"
-        }
-      ],
-      "tags": [
-        "sunglasses",
-        "accessories",
-        "eyewear",
-        "summer",
-        "fashion"
-      ],
-      "specs": {
-        "Lens Category": "Cat 3 Polarized",
-        "Frame Material": "Handcrafted Acetate",
-        "Hinge": "5-Barrel German hinges"
       }
     },
     {
@@ -488,6 +450,26 @@
       "id": "prod-1791893835958",
       "rating": 5,
       "reviewsCount": 0
+    },
+    {
+      "title": "lehangas",
+      "description": "semi stiched",
+      "brand": "nivas",
+      "category": "Fashion",
+      "price": 99.97,
+      "originalPrice": 0,
+      "stock": 22,
+      "images": [
+        "https://cdn.pixabay.com/photo/2023/01/19/16/43/woman-7729639_1280.jpg"
+      ],
+      "tags": [
+        "tech",
+        "premium"
+      ],
+      "isNew": true,
+      "id": "prod-1791870685611",
+      "rating": 5,
+      "reviewsCount": 0
     }
   ],
   "users": [
@@ -568,6 +550,232 @@
     {
       "items": [
         {
+          "id": "prod-1791912789433--",
+          "product": {
+            "title": "lehangas",
+            "description": "lehanga choli semi stiched",
+            "brand": "avasa",
+            "category": "Fashion",
+            "price": 99.99,
+            "originalPrice": 129.99,
+            "stock": 25,
+            "images": [
+              "https://i.pinimg.com/736x/16/c9/e6/16c9e6ab20ffb551eb4c5040ad17cc0f.jpg"
+            ],
+            "tags": [
+              "tech",
+              "premium"
+            ],
+            "isNew": true,
+            "id": "prod-1791912789433",
+            "rating": 5,
+            "reviewsCount": 0
+          },
+          "quantity": 1,
+          "selectedColor": "",
+          "selectedSize": ""
+        }
+      ],
+      "subtotal": 99.99,
+      "discount": 0,
+      "shippingCost": 4.99,
+      "tax": 7.9992,
+      "total": 112.97919999999999,
+      "currency": "INR",
+      "customer": {
+        "fullName": "bhagya",
+        "email": "bhagyachowdary1207@gmail.com",
+        "phone": "+91 7842274273",
+        "address": "42 MG Road, Koramangala",
+        "city": "Bengaluru",
+        "postalCode": "560034",
+        "country": "India"
+      },
+      "shippingMethod": {
+        "id": "standard",
+        "name": "Standard Delivery",
+        "cost": 4.99,
+        "estimatedDays": "3-5 business days",
+        "description": "Reliable postal shipping to your door"
+      },
+      "paymentMethod": "cod",
+      "status": "Returned",
+      "id": "ord-1791966426519",
+      "orderNumber": "DMT-445427",
+      "createdAt": "2026-10-14T08:27:06.519Z",
+      "trackingNumber": "TRK-AGAZ1SKF",
+      "userId": "usr-1791949527099",
+      "userName": "bhagya",
+      "returnReason": "Customer Return",
+      "returnRequestedAt": "2026-10-14T08:28:47.332Z",
+      "returnApprovedAt": "2026-10-14T08:28:47.332Z",
+      "refundDetails": {
+        "accountHolderName": "bhagya",
+        "accountNumber": "N/A (Cash on Delivery)",
+        "ifscCode": "N/A",
+        "requestedAt": "2026-10-14T08:28:47.332Z",
+        "refundStatus": "Refund Issued",
+        "refundIssuedAt": "2026-10-14T08:28:47.332Z",
+        "refundTransactionId": "RFND-305798"
+      }
+    },
+    {
+      "items": [
+        {
+          "id": "prod-1791912789433--",
+          "product": {
+            "title": "lehangas",
+            "description": "lehanga choli semi stiched",
+            "brand": "avasa",
+            "category": "Fashion",
+            "price": 99.99,
+            "originalPrice": 129.99,
+            "stock": 25,
+            "images": [
+              "https://i.pinimg.com/736x/16/c9/e6/16c9e6ab20ffb551eb4c5040ad17cc0f.jpg"
+            ],
+            "tags": [
+              "tech",
+              "premium"
+            ],
+            "isNew": true,
+            "id": "prod-1791912789433",
+            "rating": 5,
+            "reviewsCount": 0
+          },
+          "quantity": 1,
+          "selectedColor": "",
+          "selectedSize": ""
+        }
+      ],
+      "subtotal": 99.99,
+      "discount": 0,
+      "shippingCost": 4.99,
+      "tax": 7.9992,
+      "total": 112.97919999999999,
+      "currency": "INR",
+      "customer": {
+        "fullName": "bhagya",
+        "email": "bhagyachowdary1207@gmail.com",
+        "phone": "+91 7842274273",
+        "address": "42 MG Road, Koramangala",
+        "city": "Bengaluru",
+        "postalCode": "560034",
+        "country": "India"
+      },
+      "shippingMethod": {
+        "id": "standard",
+        "name": "Standard Delivery",
+        "cost": 4.99,
+        "estimatedDays": "3-5 business days",
+        "description": "Reliable postal shipping to your door"
+      },
+      "paymentMethod": "cod",
+      "status": "Cancelled",
+      "id": "ord-1791966369798",
+      "orderNumber": "DMT-738790",
+      "createdAt": "2026-10-14T08:26:09.798Z",
+      "trackingNumber": "TRK-08QYHSL6",
+      "userId": "usr-1791949527099",
+      "userName": "bhagya",
+      "cancellationReason": "Cancelled by Customer",
+      "cancelledAt": "2026-10-14T08:26:25.129Z"
+    },
+    {
+      "items": [
+        {
+          "id": "prod-2-Space Gray-",
+          "product": {
+            "id": "prod-2",
+            "title": "Titan Chrono Smartwatch & Health Tracker",
+            "description": "Aerospace-grade titanium casing, sapphire crystal display, ECG monitoring, and built-in dual-frequency GPS designed for extreme expeditions.",
+            "price": 329,
+            "originalPrice": 389,
+            "category": "Accessories",
+            "brand": "Titan Precision",
+            "rating": 4.8,
+            "reviewsCount": 89,
+            "stock": 25,
+            "featured": true,
+            "images": [
+              "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80",
+              "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?auto=format&fit=crop&w=800&q=80"
+            ],
+            "colors": [
+              {
+                "name": "Space Gray",
+                "hex": "#334155"
+              },
+              {
+                "name": "Solar Orange",
+                "hex": "#ea580c"
+              }
+            ],
+            "tags": [
+              "smartwatch",
+              "fitness",
+              "gps",
+              "titanium",
+              "wearable"
+            ],
+            "specs": {
+              "Display": "1.43\" AMOLED 1000 nits",
+              "Water Resistance": "10 ATM (100m)",
+              "Battery Life": "14 Days standard use",
+              "Sensors": "ECG, SpO2, Heart Rate, Barometer"
+            }
+          },
+          "quantity": 1,
+          "selectedColor": "Space Gray",
+          "selectedSize": ""
+        }
+      ],
+      "subtotal": 329,
+      "discount": 0,
+      "shippingCost": 0,
+      "tax": 26.32,
+      "total": 355.32,
+      "currency": "INR",
+      "customer": {
+        "fullName": "keerthii",
+        "email": "teamp54321@gmail.com",
+        "phone": "+91 9392213974",
+        "address": "42 MG Road, Koramangala",
+        "city": "Bengaluru",
+        "postalCode": "560034",
+        "country": "India"
+      },
+      "shippingMethod": {
+        "id": "standard",
+        "name": "Standard Delivery",
+        "cost": 0,
+        "estimatedDays": "3-5 business days",
+        "description": "Reliable postal shipping to your door"
+      },
+      "paymentMethod": "cod",
+      "status": "Returned",
+      "id": "ord-1791962974045",
+      "orderNumber": "DMT-213616",
+      "createdAt": "2026-10-14T07:29:34.045Z",
+      "trackingNumber": "TRK-98KKX3RC",
+      "userId": "usr-1791880847391",
+      "userName": "keerthii",
+      "returnReason": "Customer Return",
+      "returnRequestedAt": "2026-10-14T07:30:07.780Z",
+      "returnApprovedAt": "2026-10-14T07:30:07.780Z",
+      "refundDetails": {
+        "accountHolderName": "keerthii",
+        "accountNumber": "N/A (Cash on Delivery)",
+        "ifscCode": "N/A",
+        "requestedAt": "2026-10-14T07:30:07.780Z",
+        "refundStatus": "Refund Issued",
+        "refundIssuedAt": "2026-10-14T07:30:07.780Z",
+        "refundTransactionId": "RFND-377656"
+      }
+    },
+    {
+      "items": [
+        {
           "id": "prod-4-Retro Cream-",
           "product": {
             "id": "prod-4",
@@ -638,11 +846,23 @@
         "description": "Reliable postal shipping to your door"
       },
       "paymentMethod": "cod",
-      "status": "Confirmed",
+      "status": "Returned",
       "id": "ord-1791893583071",
       "orderNumber": "DMT-398618",
       "createdAt": "2026-10-13T12:13:03.071Z",
-      "trackingNumber": "TRK-YP7W61KY"
+      "trackingNumber": "TRK-YP7W61KY",
+      "returnReason": "Arrived later than expected",
+      "returnRequestedAt": "2026-10-14T06:41:38.767Z",
+      "returnApprovedAt": "2026-10-14T06:41:38.767Z",
+      "refundDetails": {
+        "accountHolderName": "keerthii",
+        "accountNumber": "N/A (Cash on Delivery)",
+        "ifscCode": "N/A",
+        "requestedAt": "2026-10-14T06:41:38.767Z",
+        "refundStatus": "Refund Issued",
+        "refundIssuedAt": "2026-10-14T06:41:38.767Z",
+        "refundTransactionId": "RFND-425231"
+      }
     },
     {
       "items": [
@@ -732,5 +952,5 @@
       "cancelledAt": "2026-10-14T04:34:27.227Z"
     }
   ],
-  "lastSavedAt": "2026-10-14T06:03:48.467Z"
+  "lastSavedAt": "2026-10-14T08:51:07.710Z"
 }

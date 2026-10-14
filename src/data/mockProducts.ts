@@ -338,33 +338,6 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Fit': 'Boxy relaxed fit with drop shoulder',
     },
   },
-  {
-    id: 'prod-12',
-    title: 'Nebula Smart MagSafe Power Bank 10,000mAh',
-    description: 'Slim aviation-grade alloy wireless battery pack with built-in folding kickstand and real-time OLED percentage battery & charging watt display.',
-    price: 69.95,
-    originalPrice: 85.00,
-    category: 'Electronics',
-    brand: 'Acoustix Labs',
-    rating: 4.6,
-    reviewsCount: 95,
-    stock: 45,
-    isNew: true,
-    images: [
-      'https://images.unsplash.com/photo-1609592424109-dd9892f1b177?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1622445262464-84b1456045b6?auto=format&fit=crop&w=800&q=80',
-    ],
-    colors: [
-      { name: 'Graphite Grey', hex: '#475569' },
-      { name: 'Aurora Blue', hex: '#0284c7' },
-    ],
-    tags: ['charger', 'magsafe', 'powerbank', 'wireless', 'tech'],
-    specs: {
-      'Capacity': '10,000mAh / 38.5Wh',
-      'Output': '15W Wireless Qi + 30W USB-C PD',
-      'Pass-Through Charging': 'Yes supported',
-    },
-  },
 ];
 
 export const INITIAL_REVIEWS: Record<string, Array<{ id: string; productId: string; userName: string; rating: number; date: string; comment: string; verifiedPurchase: boolean }>> = {

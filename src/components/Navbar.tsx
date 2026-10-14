@@ -307,7 +307,7 @@ export const Navbar: React.FC = () => {
               }`}
             >
               <Package className="w-4 h-4" />
-              <span>My Orders & Returns</span>
+              <span>Customer Orders & Returns</span>
               {userOrders.length > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full bg-brand-600 text-white text-[10px] font-bold">
                   {userOrders.length}
@@ -575,7 +575,7 @@ export const Navbar: React.FC = () => {
               }`}
             >
               <Package className="w-4 h-4" />
-              <span>My Orders & Returns</span>
+              <span>Customer Orders & Returns</span>
               {userOrders.length > 0 && (
                 <span className="ml-auto px-1.5 py-0.2 rounded-full bg-brand-600 text-white text-[10px] font-bold">
                   {userOrders.length}

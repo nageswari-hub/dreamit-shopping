@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
-import { Product, RefundStatus } from '../types';
+import { Product } from '../types';
 import { AUTHORIZED_ADMIN_EMAIL, CURRENCIES } from '../data/mockProducts';
 import {
   TrendingUp,
@@ -19,13 +19,13 @@ import {
   User,
   CornerDownLeft,
   Truck,
-  Building,
   CheckCircle2,
-  Clock,
   Smartphone,
   MessageSquare,
   ExternalLink,
   Banknote,
+  MapPin,
+  Package,
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -57,6 +57,7 @@ export const AdminDashboard: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [activeAdminTab, setActiveAdminTab] = useState<'inventory' | 'orders' | 'settings'>('inventory');
+  const [orderFilter, setOrderFilter] = useState<'all' | 'active' | 'returns' | 'cancelled'>('all');
   const [tempSmsKey, setTempSmsKey] = useState(smsApiKey);
   const [testPhone, setTestPhone] = useState('7013304012');
   const [testSmsStatus, setTestSmsStatus] = useState<string | null>(null);
@@ -150,6 +151,28 @@ export const AdminDashboard: React.FC = () => {
   const avgOrderValue = totalOrdersCount > 0 ? totalRevenue / totalOrdersCount : 0;
   const lowStockCount = products.filter((p) => p.stock <= 5).length;
   const pendingReturns = orders.filter((o) => o.status === 'Return Requested');
+  const activeOrdersCount = orders.filter(
+    (o) => o.status === 'Confirmed' || o.status === 'Processing' || o.status === 'Shipped' || o.status === 'Delivered'
+  ).length;
+  const returnedOrdersCount = orders.filter(
+    (o) => o.status === 'Returned' || o.status === 'Return Requested'
+  ).length;
+  const cancelledOrdersCount = orders.filter(
+    (o) => o.status === 'Cancelled' || o.status === 'Cancellation Requested'
+  ).length;
+
+  const filteredOrders = orders.filter((ord) => {
+    if (orderFilter === 'active') {
+      return ord.status === 'Confirmed' || ord.status === 'Processing' || ord.status === 'Shipped' || ord.status === 'Delivered';
+    }
+    if (orderFilter === 'returns') {
+      return ord.status === 'Returned' || ord.status === 'Return Requested';
+    }
+    if (orderFilter === 'cancelled') {
+      return ord.status === 'Cancelled' || ord.status === 'Cancellation Requested';
+    }
+    return true;
+  });
 
   const handleOpenAdd = () => {
     setEditingProduct(null);
@@ -500,254 +523,301 @@ export const AdminDashboard: React.FC = () => {
       {/* TAB 2: Orders & Return Approvals */}
       {activeAdminTab === 'orders' && (
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden space-y-4">
-          <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Orders & Returns Management
+                Customer Orders, Returns &amp; Cancellations
               </h2>
               <p className="text-xs text-slate-500">
-                Update delivery progress and approve customer return refund requests.
+                Complete overview of customer orders, item breakdowns, return cash pickups, and cancellation status.
               </p>
+            </div>
+
+            {/* Quick Filter Tabs */}
+            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setOrderFilter('all')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  orderFilter === 'all'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                All Orders ({orders.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrderFilter('active')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  orderFilter === 'active'
+                    ? 'bg-brand-600 text-white shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Active ({activeOrdersCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrderFilter('returns')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  orderFilter === 'returns'
+                    ? 'bg-purple-600 text-white shadow-xs font-bold'
+                    : 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40'
+                }`}
+              >
+                Returns ({returnedOrdersCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrderFilter('cancelled')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  orderFilter === 'cancelled'
+                    ? 'bg-rose-600 text-white shadow-xs font-bold'
+                    : 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'
+                }`}
+              >
+                Cancelled ({cancelledOrdersCount})
+              </button>
             </div>
           </div>
 
-          {orders.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase tracking-wider text-[10px] font-bold">
-                  <tr>
-                    <th className="py-3 px-5">Order #</th>
-                    <th className="py-3 px-4">Customer</th>
-                    <th className="py-3 px-4">Total</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-5 text-right">Admin Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {orders.map((ord) => (
-                    <tr
-                      key={ord.id}
-                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors align-top"
-                    >
-                      <td className="py-3.5 px-5 font-mono font-bold text-slate-900 dark:text-white">
-                        <div>{ord.orderNumber}</div>
-                        <div className="text-[10px] text-slate-400 font-sans mt-0.5">
-                          {new Date(ord.createdAt).toLocaleDateString()}
+          {filteredOrders.length > 0 ? (
+            <div className="divide-y divide-slate-200 dark:divide-slate-800">
+              {filteredOrders.map((ord) => {
+                const isReturned = ord.status === 'Returned' || ord.status === 'Return Requested';
+                const isCancelled = ord.status === 'Cancelled' || ord.status === 'Cancellation Requested';
+
+                return (
+                  <div
+                    key={ord.id}
+                    className="p-5 sm:p-6 space-y-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
+                  >
+                    {/* Header Row: Order ID, Date, Payment & Status */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <span className="font-mono font-black text-sm text-slate-900 dark:text-white">
+                          {ord.orderNumber}
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          Track: {ord.trackingNumber}
+                        </span>
+                        <span className="text-[11px] text-slate-400">
+                          • {new Date(ord.createdAt).toLocaleDateString()} {new Date(ord.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900">
+                          Cash on Delivery (COD)
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                            ord.status === 'Returned'
+                              ? 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-300'
+                              : ord.status === 'Return Requested'
+                              ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-300'
+                              : ord.status === 'Cancelled'
+                              ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-300'
+                              : ord.status === 'Cancellation Requested'
+                              ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300'
+                              : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300'
+                          }`}
+                        >
+                          {ord.status}
+                        </span>
+                        <span className="font-mono font-black text-base text-slate-900 dark:text-white ml-2">
+                          {formatPrice(ord.total)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Customer & Shipping Details Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      {/* Customer Info */}
+                      <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                          Customer Details
+                        </span>
+                        <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-brand-600" />
+                          <span>{ord.customer.fullName}</span>
                         </div>
-                        <span className="inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                          {ord.paymentMethod === 'cod' ? 'COD' : ord.paymentMethod.toUpperCase()}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="font-bold text-slate-900 dark:text-white block">
-                          {ord.customer.fullName}
-                        </span>
-                        <span className="text-[11px] text-slate-500 block">{ord.customer.email}</span>
+                        <div className="text-slate-600 dark:text-slate-300">
+                          ✉️ {ord.customer.email}
+                        </div>
                         {ord.customer.phone && (
-                          <span className="text-[10px] text-slate-400 block font-mono">📱 {ord.customer.phone}</span>
+                          <div className="text-slate-600 dark:text-slate-300 font-mono">
+                            📱 +91 {ord.customer.phone.replace(/[\s\-\(\)\+]/g, '').slice(-10)}
+                          </div>
                         )}
+                      </div>
 
-                        {/* Customer-submitted Bank Account Details for Refund */}
-                        {/* Customer-submitted Bank Account Details for Refund */}
-                        {ord.refundDetails ? (
-                          <div className="mt-2.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-[11px] space-y-1">
-                            <div className="flex items-center gap-1 font-bold text-slate-700 dark:text-slate-300">
-                              <Building className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
-                              <span>Refund Bank Account:</span>
-                            </div>
-                            <div className="text-slate-700 dark:text-slate-200">
-                              A/C: <span className="font-mono font-bold text-slate-900 dark:text-white">{ord.refundDetails.accountNumber}</span>
-                            </div>
-                            <div className="text-slate-500 text-[10px]">
-                              IFSC: <span className="font-mono font-bold">{ord.refundDetails.ifscCode}</span> | Name: <span className="font-semibold">{ord.refundDetails.accountHolderName}</span>
-                            </div>
-                            {ord.refundDetails.bankName && (
-                              <div className="text-slate-400 text-[10px]">
-                                Bank: {ord.refundDetails.bankName}
-                              </div>
-                            )}
-                            {ord.refundDetails.upiId && (
-                              <div className="text-slate-400 text-[10px] font-mono">
-                                UPI: {ord.refundDetails.upiId}
-                              </div>
-                            )}
-                            {ord.cancellationReason && (
-                              <div className="text-rose-500 dark:text-rose-400 text-[10px] italic">
-                                Reason: &quot;{ord.cancellationReason}&quot;
-                              </div>
-                            )}
-                          </div>
-                        ) : ord.status === 'Cancelled' ? (
-                          <div className="mt-2.5 p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-[11px] space-y-0.5 text-rose-800 dark:text-rose-300">
-                            <div className="font-bold flex items-center gap-1 text-rose-700 dark:text-rose-400">
-                              <XCircle className="w-3.5 h-3.5" />
-                              <span>Order Cancelled</span>
-                            </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                              Reason: {ord.cancellationReason || 'Cancelled by Customer'}
-                            </div>
-                            {ord.cancelledAt && (
-                              <div className="text-[9px] text-slate-400 font-mono">
-                                Time: {new Date(ord.cancelledAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                              </div>
-                            )}
-                          </div>
-                        ) : ord.status === 'Cancellation Requested' ? (
-                          <div className="mt-2.5 p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-[11px] space-y-1 text-amber-800 dark:text-amber-300">
-                            <div className="flex items-center gap-1 font-bold">
-                              <Building className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                              <span>Cancellation Pending</span>
-                            </div>
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="py-3.5 px-4 font-black text-slate-900 dark:text-white">
-                        {formatPrice(ord.total)}
-                        <span className="block text-[10px] font-normal text-slate-400 mt-0.5">
-                          {ord.items.length} {ord.items.length === 1 ? 'item' : 'items'}
+                      {/* Delivery Address */}
+                      <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                          Delivery / Pickup Address
                         </span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="space-y-1.5">
-                          <span
-                            className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                              ord.status === 'Cancellation Requested'
-                                ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300'
-                                : ord.status === 'Return Requested'
-                                ? 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-300'
-                                : ord.status === 'Cancelled'
-                                ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-300'
-                                : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300'
-                            }`}
-                          >
-                            {ord.status}
+                        <div className="text-slate-700 dark:text-slate-200 font-medium flex items-start gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                          <span>
+                            {ord.customer.address}, {ord.customer.city}, {ord.customer.country}
+                            {ord.customer.postalCode ? ` - ${ord.customer.postalCode}` : ''}
                           </span>
+                        </div>
+                      </div>
+                    </div>
 
-                          {/* Cancellation / Refund Status Pill */}
-                          {ord.status === 'Cancelled' ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
-                              <XCircle className="w-3 h-3 text-rose-600" />
-                              <span>COD • No Charge</span>
+                    {/* Ordered Items Breakdown */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                        Ordered Items ({ord.items.length})
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {ord.items.map((it) => (
+                          <div
+                            key={it.id}
+                            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 flex items-center gap-2.5 text-xs"
+                          >
+                            {it.product.images?.[0] ? (
+                              <img
+                                src={it.product.images[0]}
+                                alt={it.product.title}
+                                className="w-10 h-10 rounded-lg object-cover bg-slate-100 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                                <Package className="w-5 h-5 text-slate-400" />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <span className="font-semibold text-slate-900 dark:text-white truncate block">
+                                {it.product.title}
+                              </span>
+                              <span className="text-[10px] text-slate-500 block">
+                                Qty: <strong>{it.quantity}</strong>
+                                {it.selectedColor ? ` • ${it.selectedColor}` : ''}
+                                {it.selectedSize ? ` • ${it.selectedSize}` : ''}
+                              </span>
+                            </div>
+                            <span className="font-bold text-slate-900 dark:text-white shrink-0">
+                              {formatPrice(it.product.price * it.quantity)}
                             </span>
-                          ) : (ord.status === 'Cancellation Requested' || ord.refundDetails) ? (
-                            <div>
-                              {(() => {
-                                const currentRefundStatus: RefundStatus =
-                                  ord.refundDetails?.refundStatus ||
-                                  (ord.paymentMethod === 'cod' ? 'Awaiting Parcel Return' : 'Pending Admin Approval');
+                          </div>
+                        ))}
+                      </div>
+                    </div>
 
-                                return (
-                                  <span
-                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
-                                      currentRefundStatus === 'Refund Issued'
-                                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300'
-                                        : currentRefundStatus === 'Pending Admin Approval'
-                                        ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300'
-                                        : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300'
-                                    }`}
-                                  >
-                                    {currentRefundStatus === 'Refund Issued' && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
-                                    {currentRefundStatus === 'Pending Admin Approval' && <Clock className="w-3 h-3 text-amber-600" />}
-                                    {currentRefundStatus === 'Awaiting Parcel Return' && <Truck className="w-3 h-3 text-blue-600" />}
-                                    <span>{currentRefundStatus}</span>
-                                  </span>
-                                );
-                              })()}
-                            </div>
-                          ) : null}
+                    {/* Return Details Card (Strictly display the requested cash pickup notice) */}
+                    {isReturned && (
+                      <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 text-xs space-y-1.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 font-extrabold text-purple-900 dark:text-purple-200">
+                            <CornerDownLeft className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                            <span>Customer Return Details (Cash on Delivery)</span>
+                          </div>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200">
+                            ✓ Inventory Restocked
+                          </span>
                         </div>
-                      </td>
-                      <td className="py-3.5 px-5 text-right">
-                        <div className="flex flex-col items-end gap-2">
-                          {/* 1. Refund already issued */}
-                          {ord.refundDetails?.refundStatus === 'Refund Issued' ? (
-                            <div className="text-right">
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 font-extrabold text-[11px] border border-emerald-300">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                <span>Refund Issued</span>
-                              </span>
-                              <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                                Txn: {ord.refundDetails.refundTransactionId || 'RFND-SETTLED'}
-                              </div>
-                            </div>
-                          ) : ord.status === 'Cancelled' ? (
-                            /* 2. Order Cancelled (Items returned to inventory, 0 payment deducted) */
-                            <div className="text-right">
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 font-extrabold text-[11px] border border-rose-200 dark:border-rose-900">
-                                <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                                <span>Cancelled by Customer</span>
-                              </span>
-                              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
-                                ✓ Stock Restocked
-                              </div>
-                            </div>
-                          ) : ord.status === 'Cancellation Requested' ? (
-                            /* 3. Pending cancellation approval if any */
-                            <button
-                              onClick={() => cancelOrder(ord.id, 'Cancellation Approved by Admin')}
-                              className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-[11px] flex items-center gap-1.5 cursor-pointer shadow-md shadow-rose-500/20 transition-all"
-                            >
-                              <XCircle className="w-3.5 h-3.5" />
-                              <span>Confirm Cancellation</span>
-                            </button>
-                          ) : ord.status === 'Return Requested' ? (
-                            /* 4. Post-Delivery Return Requested */
-                            <button
-                              onClick={() => approveReturn(ord.id)}
-                              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer"
-                            >
-                              <CornerDownLeft className="w-3.5 h-3.5" />
-                              <span>Approve & Refund</span>
-                            </button>
-                          ) : (
-                            /* 4. Active Order Progression */
-                            <div className="flex flex-col items-end gap-1.5">
-                              <div className="flex items-center gap-1.5">
-                                {ord.status === 'Confirmed' && (
-                                  <button
-                                    onClick={() => updateOrderStatus(ord.id, 'Processing')}
-                                    className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-semibold cursor-pointer"
-                                  >
-                                    Mark Processing
-                                  </button>
-                                )}
-                                {ord.status === 'Processing' && (
-                                  <button
-                                    onClick={() => updateOrderStatus(ord.id, 'Shipped')}
-                                    className="px-2.5 py-1 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-[11px] font-semibold cursor-pointer"
-                                  >
-                                    Mark Shipped
-                                  </button>
-                                )}
-                                {ord.status === 'Shipped' && (
-                                  <button
-                                    onClick={() => updateOrderStatus(ord.id, 'Delivered')}
-                                    className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-semibold cursor-pointer"
-                                  >
-                                    Mark Delivered
-                                  </button>
-                                )}
-                              </div>
-                              {(ord.status === 'Confirmed' || ord.status === 'Processing') && (
-                                <button
-                                  onClick={() => cancelOrder(ord.id, 'Cancelled by Admin')}
-                                  className="text-[10px] text-rose-500 hover:text-rose-700 hover:underline cursor-pointer"
-                                >
-                                  Cancel Order
-                                </button>
-                              )}
-                            </div>
-                          )}
+                        <p className="text-purple-700 dark:text-purple-300 font-semibold">
+                          Refunds for COD orders are issued in cash at the time of return pickup.
+                        </p>
+                        {ord.returnRequestedAt && (
+                          <div className="text-[10px] text-purple-600 dark:text-purple-400 font-mono pt-1 border-t border-purple-200/60 dark:border-purple-800">
+                            Return Timestamp: {new Date(ord.returnRequestedAt).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Cancellation Details Card */}
+                    {isCancelled && (
+                      <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-xs space-y-1.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 font-extrabold text-rose-900 dark:text-rose-200">
+                            <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                            <span>Order Cancellation Details</span>
+                          </div>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300">
+                            ✓ Inventory Restocked
+                          </span>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <p className="text-rose-700 dark:text-rose-300">
+                          <strong>Order Cancelled by Customer</strong> • No payment was collected (Cash on Delivery).
+                        </p>
+                        {ord.cancelledAt && (
+                          <div className="text-[10px] text-slate-500 font-mono pt-1 border-t border-rose-200/60 dark:border-rose-800">
+                            Cancelled on: {new Date(ord.cancelledAt).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Admin Action Controls (For Active or Return Requested orders) */}
+                    <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      {ord.status === 'Return Requested' && (
+                        <button
+                          type="button"
+                          onClick={() => approveReturn(ord.id)}
+                          className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-1.5"
+                        >
+                          <CornerDownLeft className="w-3.5 h-3.5" />
+                          <span>Approve Return (Restock &amp; Confirm Cash Pickup)</span>
+                        </button>
+                      )}
+
+                      {ord.status === 'Confirmed' && (
+                        <button
+                          type="button"
+                          onClick={() => updateOrderStatus(ord.id, 'Processing')}
+                          className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold cursor-pointer"
+                        >
+                          Mark Processing
+                        </button>
+                      )}
+                      {ord.status === 'Processing' && (
+                        <button
+                          type="button"
+                          onClick={() => updateOrderStatus(ord.id, 'Shipped')}
+                          className="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold cursor-pointer shadow-xs"
+                        >
+                          Mark Shipped
+                        </button>
+                      )}
+                      {ord.status === 'Shipped' && (
+                        <button
+                          type="button"
+                          onClick={() => updateOrderStatus(ord.id, 'Delivered')}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold cursor-pointer shadow-xs"
+                        >
+                          Mark Delivered
+                        </button>
+                      )}
+
+                      {(ord.status === 'Confirmed' || ord.status === 'Processing') && (
+                        <button
+                          type="button"
+                          onClick={() => cancelOrder(ord.id, 'Cancelled by Admin')}
+                          className="px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-xs font-bold cursor-pointer"
+                        >
+                          Cancel Order
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
-            <div className="text-center py-12 text-slate-500 text-xs">
-              No orders have been placed in the store yet.
+            <div className="text-center py-12 px-4 space-y-2">
+              <Package className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                No orders found under &quot;{orderFilter}&quot;
+              </p>
+              <p className="text-xs text-slate-400">
+                Customer purchases, returns, and cancellations will appear here.
+              </p>
             </div>
           )}
         </div>

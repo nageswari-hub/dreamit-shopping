@@ -200,23 +200,15 @@ const loadInitialUsers = (): User[] => {
 };
 
 const loadInitialProducts = (): Product[] => {
-  const dreamit = getStorageItem<Product[]>('dreamit_products', []);
-  const elevate = getStorageItem<Product[]>('elevate_products', []);
-
-  const pMap = new Map<string, Product>();
-  INITIAL_PRODUCTS.forEach((p) => pMap.set(p.id, p));
-
-  if (Array.isArray(elevate) && elevate.length > 0) {
-    elevate.forEach((p) => {
-      if (p && p.id) pMap.set(p.id, p);
-    });
-  }
+  const dreamit = getStorageItem<Product[]>('dreamit_products', null as any);
   if (Array.isArray(dreamit) && dreamit.length > 0) {
-    dreamit.forEach((p) => {
-      if (p && p.id) pMap.set(p.id, p);
-    });
+    return dreamit;
   }
-  return Array.from(pMap.values());
+  const elevate = getStorageItem<Product[]>('elevate_products', null as any);
+  if (Array.isArray(elevate) && elevate.length > 0) {
+    return elevate;
+  }
+  return INITIAL_PRODUCTS;
 };
 
 const isLegacyDummyOrder = (o: any) => {
@@ -347,23 +339,10 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       })
       .then((data) => {
         if (data && typeof data === 'object') {
-          // Merge products
+          // Products loaded from disk store (authoritative)
           if (Array.isArray(data.products) && data.products.length > 0) {
-            setProducts((prev) => {
-              const pMap = new Map<string, Product>();
-              data.products.forEach((p: Product) => {
-                if (p && p.id) pMap.set(p.id, p);
-              });
-              // Keep any newly added products from prev not yet on disk
-              prev.forEach((p) => {
-                if (p && p.id && !pMap.has(p.id)) {
-                  pMap.set(p.id, p);
-                }
-              });
-              const merged = Array.from(pMap.values());
-              setStorageItem('dreamit_products', merged);
-              return merged;
-            });
+            setProducts(data.products);
+            setStorageItem('dreamit_products', data.products);
           }
 
           // Merge users
@@ -1243,10 +1222,13 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     showNotification(
-      `Return processed for Order ${order.orderNumber}! Refund Issued (Ref: ${refundTxnId}).`,
-      'success'
+      'Refunds for COD orders are issued in cash at the time of return pickup.',
+      'info'
     );
-    return { success: true, message: 'Return processed and Refund Issued.' };
+    return {
+      success: true,
+      message: 'Refunds for COD orders are issued in cash at the time of return pickup.',
+    };
   };
 
   const approveReturn = (orderId: string) => {
@@ -1289,8 +1271,8 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     showNotification(
-      `Return approved for Order ${order.orderNumber}. Refund Issued (Ref: ${refundTxnId}).`,
-      'success'
+      'Refunds for COD orders are issued in cash at the time of return pickup.',
+      'info'
     );
   };
 
@@ -1355,7 +1337,25 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const deleteProduct = (productId: string) => {
-    setProducts((prev) => prev.filter((p) => p.id !== productId));
+    setProducts((prev) => {
+      const next = prev.filter((p) => p.id !== productId);
+      setStorageItem('dreamit_products', next);
+      try {
+        fetch('/api/store', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            products: next,
+            users,
+            orders,
+            lastSavedAt: new Date().toISOString(),
+          }),
+        }).catch((err) => console.warn('Sync delete to disk error:', err));
+      } catch (e) {
+        console.warn('Sync delete error:', e);
+      }
+      return next;
+    });
     showNotification('Product removed from catalog', 'info');
   };
 

@@ -15,7 +15,6 @@ import {
   XCircle,
   AlertCircle,
   CornerDownLeft,
-  Building,
   Lock,
 } from 'lucide-react';
 
@@ -42,7 +41,6 @@ export const OrdersView: React.FC = () => {
 
   // Return request modal state
   const [returningOrder, setReturningOrder] = useState<Order | null>(null);
-  const [returnReason, setReturnReason] = useState('Item size does not fit as expected');
 
   // Invoice modal state
   const [selectedInvoice, setSelectedInvoice] = useState<Order | null>(null);
@@ -73,7 +71,7 @@ export const OrdersView: React.FC = () => {
 
   const confirmReturn = () => {
     if (!returningOrder) return;
-    requestReturn(returningOrder.id, returnReason);
+    requestReturn(returningOrder.id, 'Customer Return');
     setReturningOrder(null);
   };
 
@@ -149,10 +147,10 @@ export const OrdersView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            My Orders, Tracking & Returns
+            Customer Orders & Returns
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Track your deliveries, cancel active shipments, request returns, and print official invoices for <strong>{currentUser.name}</strong>.
+            Track deliveries, cancel active shipments, manage returns, and print official invoices for <strong>{currentUser.name}</strong>.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -237,14 +235,6 @@ export const OrdersView: React.FC = () => {
                       {order.status}
                     </span>
 
-                    {/* Show Refund Issued ONLY on Return */}
-                    {(order.status === 'Returned' || order.refundDetails?.refundStatus === 'Refund Issued') && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold text-xs border border-emerald-300">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Refund Issued</span>
-                      </span>
-                    )}
-
                     <button
                       className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                       aria-label="Toggle details"
@@ -258,39 +248,42 @@ export const OrdersView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Return status notification banner */}
-                {order.status === 'Returned' && (
-                  <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-200 dark:border-emerald-900 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-200">
+                {/* Single Return status notification banner */}
+                {(isReturned || order.status === 'Return Requested') && (
+                  <div className="p-4 bg-purple-50 dark:bg-purple-950/40 border-b border-purple-200 dark:border-purple-900 flex items-center justify-between text-xs text-purple-800 dark:text-purple-200">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                      <div>
-                        <strong>Return Accepted &amp; Refund Issued:</strong> Transaction reference <span className="font-mono font-bold">{order.refundDetails?.refundTransactionId || 'RFND-SETTLED'}</span>.
-                        {order.returnReason && <span className="block text-[11px] text-emerald-600 dark:text-emerald-400">Reason: &quot;{order.returnReason}&quot;</span>}
-                      </div>
+                      <CornerDownLeft className="w-4 h-4 text-purple-600 shrink-0" />
+                      <span className="font-semibold">
+                        Refunds for COD orders are issued in cash at the time of return pickup.
+                      </span>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100 font-bold text-[10px]">
-                      Refund Settled
+                    <span className="px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-100 font-bold text-[10px]">
+                      COD Return
                     </span>
                   </div>
                 )}
 
-                {/* Cancelled notice banner (Never shows refund issued!) */}
+                {/* Single Cancelled notice banner with date integration */}
                 {isCancelled && (
                   <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-900 flex items-center justify-between text-xs text-rose-800 dark:text-rose-200">
                     <div className="flex items-center gap-2">
                       <XCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
                       <div>
-                        <strong>Order Cancelled:</strong> Since this order was Cash on Delivery, no payment was charged. Inventory was restocked.
+                        <strong>Order Cancelled:</strong> This Cash on Delivery order was cancelled on{' '}
+                        <span className="font-bold">
+                          {new Date(order.cancelledAt || order.createdAt).toLocaleDateString()}
+                        </span>
+                        . No payment was charged and items have been restocked.
                       </div>
                     </div>
                     <span className="px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-900 text-rose-800 dark:text-rose-100 font-bold text-[10px]">
-                      No Charge
+                      Cancelled
                     </span>
                   </div>
                 )}
 
                 {/* Timeline Progress Bar (only if active) */}
-                {!isCancelled && !isReturned ? (
+                {!isCancelled && !isReturned && order.status !== 'Return Requested' && (
                   <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                     <div className="max-w-2xl mx-auto">
                       <div className="relative flex items-center justify-between">
@@ -367,38 +360,6 @@ export const OrdersView: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                ) : (
-                  <div className="p-4 bg-rose-50/70 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-900 flex items-center justify-between text-xs text-rose-800 dark:text-rose-200">
-                    <div className="flex items-center gap-2">
-                      <XCircle className="w-4 h-4 text-rose-500" />
-                      <span>
-                        This order was cancelled on{' '}
-                        {order.cancelledAt
-                          ? new Date(order.cancelledAt).toLocaleDateString()
-                          : 'recently'}
-                        . Reason: <em>"{order.cancellationReason}"</em>.
-                      </span>
-                    </div>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                      Refund Issued
-                    </span>
-                  </div>
-                )}
-
-                {/* Return Status Notice */}
-                {order.status === 'Return Requested' && (
-                  <div className="p-3 bg-purple-50 dark:bg-purple-950/40 border-b border-purple-200 dark:border-purple-900 flex items-center gap-2 text-xs text-purple-800 dark:text-purple-200">
-                    <CornerDownLeft className="w-4 h-4 text-purple-600" />
-                    <span>
-                      Return requested: <em>"{order.returnReason}"</em>. Our support team will review and approve within 24 hours.
-                    </span>
-                  </div>
-                )}
-                {order.status === 'Returned' && (
-                  <div className="p-3 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-semibold">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                    <span>Item returned and refund completed to original payment method.</span>
-                  </div>
                 )}
 
                 {/* Expanded Order Items & Actions */}
@@ -443,70 +404,6 @@ export const OrdersView: React.FC = () => {
                         ))}
                       </div>
                     </div>
-
-                    {/* Refund & Account Status Banner (if cancelled or refund requested) */}
-                    {order.refundDetails && (
-                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs space-y-2.5">
-                        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200/80 dark:border-slate-700">
-                          <div className="flex items-center gap-2">
-                            <Building className="w-4 h-4 text-brand-600" />
-                            <span className="font-extrabold text-slate-900 dark:text-white">
-                              Refund Details (Cash on Delivery)
-                            </span>
-                          </div>
-                          <span
-                            className={`px-3 py-1 rounded-full text-[11px] font-bold border ${
-                              order.refundDetails.refundStatus === 'Refund Issued'
-                                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300'
-                                : order.refundDetails.refundStatus === 'Awaiting Parcel Return'
-                                ? 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-300'
-                                : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 border-amber-300'
-                            }`}
-                          >
-                            {order.refundDetails.refundStatus === 'Refund Issued' && '✅ Refund Issued'}
-                            {order.refundDetails.refundStatus === 'Awaiting Parcel Return' && '📦 Refund Upon Parcel Return'}
-                            {order.refundDetails.refundStatus === 'Pending Admin Approval' && '⏳ Pending Admin Refund Acceptance'}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px]">
-                          <div>
-                            <span className="text-slate-400 block text-[10px] font-bold uppercase">Account Holder</span>
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">{order.refundDetails.accountHolderName}</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block text-[10px] font-bold uppercase">Account Number</span>
-                            <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
-                              •••• •••• {order.refundDetails.accountNumber.slice(-4) || 'N/A'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block text-[10px] font-bold uppercase">IFSC Code / Bank</span>
-                            <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
-                              {order.refundDetails.ifscCode} {order.refundDetails.bankName && `(${order.refundDetails.bankName})`}
-                            </span>
-                          </div>
-                        </div>
-
-                        {order.paymentMethod === 'cod' && order.refundDetails.refundStatus === 'Awaiting Parcel Return' && (
-                          <div className="text-[11px] text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 p-2.5 rounded-xl flex items-center gap-1.5">
-                            <Truck className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span>Cash on Delivery: Refund will be issued to your bank account once the parcel arrives back at our warehouse.</span>
-                          </div>
-                        )}
-
-                        {order.refundDetails.refundTransactionId && (
-                          <div className="pt-2 border-t border-slate-200 dark:border-slate-700 text-[11px] flex flex-wrap items-center justify-between text-emerald-700 dark:text-emerald-300 font-semibold gap-2">
-                            <span>Transaction ID: <code className="font-mono font-bold bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-emerald-300">{order.refundDetails.refundTransactionId}</code></span>
-                            {order.refundDetails.refundIssuedAt && (
-                              <span className="text-slate-500 font-normal">
-                                Credited on: {new Date(order.refundDetails.refundIssuedAt).toLocaleDateString()}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
 
                     {/* Delivery & Billing Summary */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-200 dark:border-slate-800 text-xs">
@@ -687,52 +584,34 @@ export const OrdersView: React.FC = () => {
           aria-modal="true"
           className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
         >
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5">
-            <div className="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 flex items-center justify-center mx-auto">
-              <CornerDownLeft className="w-6 h-6" />
-            </div>
-            <div className="text-center space-y-1">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                Return Order {returningOrder.orderNumber}?
-              </h3>
-              <p className="text-xs text-slate-500">
-                Confirm return for this order. Refund of{' '}
-                <strong className="text-slate-900 dark:text-white font-bold">{formatPrice(returningOrder.total)}</strong>{' '}
-                will be issued immediately upon confirmation.
-              </p>
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-purple-100 dark:bg-purple-950/80 text-purple-600 dark:text-purple-400 flex items-center justify-center mx-auto shadow-inner">
+              <CornerDownLeft className="w-7 h-7" />
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                Reason for return:
-              </label>
-              <select
-                value={returnReason}
-                onChange={(e) => setReturnReason(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
-              >
-                <option value="Item size does not fit as expected">Item size does not fit as expected</option>
-                <option value="Item received defective or damaged">Item received defective or damaged</option>
-                <option value="Product does not match website description">Product does not match website description</option>
-                <option value="Arrived later than expected">Arrived later than expected</option>
-                <option value="Changed mind / No longer needed">Changed mind / No longer needed</option>
-              </select>
+            <div className="space-y-3">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                Return Order {returningOrder.orderNumber}?
+              </h3>
+              <p className="text-sm font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 p-4 rounded-2xl border border-purple-200 dark:border-purple-800 leading-relaxed">
+                Refunds for COD orders are issued in cash at the time of return pickup.
+              </p>
             </div>
 
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setReturningOrder(null)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
-                Cancel
+                Keep Order
               </button>
               <button
                 type="button"
                 onClick={confirmReturn}
-                className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/20 transition-all cursor-pointer"
+                className="flex-1 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/20 transition-all cursor-pointer"
               >
-                Confirm &amp; Issue Refund
+                Confirm Return
               </button>
             </div>
           </div>
